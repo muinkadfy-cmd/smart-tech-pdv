@@ -1,12 +1,12 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
   "productName": "Smart.Tech.PDV",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "identifier": "com.smarttech.pdv",
   "build": {
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist",
-    "beforeBuildCommand": "node ./scripts/check-updater.mjs",
+    "beforeBuildCommand": "npm run build && node ./scripts/check-updater.mjs",
     "beforeDevCommand": "npm run dev"
   },
   "app": {
@@ -49,9 +49,9 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "OFFLINE_DEV_SKIP_RELEASE_PUBLIC_KEY",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk1MDYwQUZCN0IwRUY0REUKUldUZTlBNTcrd29HbFJGcU1EdnRGSlBZMFdTRVQzZWRWRUwyWmNvUFAwK1UwZHJ3N0oyaTY0aWgK",
       "endpoints": [
-        "https://github.com/muinkadfy-cmd/smart-tech-pdv-3/releases/latest/download/latest.json"
+        "https://github.com/muinkadfy-cmd/smart-tech-pdv/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "passive"
