@@ -1,0 +1,62 @@
+name: release-desktop
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  contents: write
+
+jobs:
+  windows-release:
+    runs-on: windows-latest
+    env:
+      GITHUB_RELEASES_REPO: ${{ github.repository }}
+      TAURI_UPDATER_ENDPOINT: https://github.com/${{ github.repository }}/releases/latest/download/latest.json
+      TAURI_UPDATER_PUBKEY: ${{ secrets.TAURI_UPDATER_PUBKEY }}
+      TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+      TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install frontend dependencies
+        run: npm ci
+
+      - name: Type-check app
+        run: npm run type-check
+        shell: powershell
+
+      - name: Validate updater prerequisites
+        run: node ./scripts/check-updater.mjs
+        shell: powershell
+
+      - name: Build desktop artifacts
+        run: npm run tauri:build
+        shell: powershell
+
+      - name: Prepare release bundle
+        run: node ./scripts/release-desktop.mjs --skip-build
+        shell: powershell
+
+      - name: Validate release folder
+        run: node ./scripts/check-release.mjs
+        shell: powershell
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*/*.msi
+            release/*/*.sig
+            release/*/latest.json
+          generate_release_notes: true

@@ -1,0 +1,61 @@
+{
+  "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
+  "productName": "Smart.Tech.PDV",
+  "version": "2.0.0",
+  "identifier": "com.smarttech.pdv",
+  "build": {
+    "devUrl": "http://localhost:1420",
+    "frontendDist": "../dist",
+    "beforeBuildCommand": "node ./scripts/check-updater.mjs",
+    "beforeDevCommand": "npm run dev"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Smart Tech PDV",
+        "label": "main",
+        "width": 1440,
+        "height": 900,
+        "minWidth": 1280,
+        "minHeight": 720,
+        "resizable": true,
+        "fullscreen": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": [
+      "msi"
+    ],
+    "publisher": "Smart Tech",
+    "category": "Business",
+    "shortDescription": "ERP/PDV desktop premium para loja de calcados",
+    "windows": {
+      "wix": {
+        "language": [
+          "en-US"
+        ]
+      }
+    },
+    "icon": [
+      "icons/icon-32.png",
+      "icons/icon-128.png",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "OFFLINE_DEV_SKIP_RELEASE_PUBLIC_KEY",
+      "endpoints": [
+        "https://github.com/muinkadfy-cmd/smart-tech-pdv-3/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
+}

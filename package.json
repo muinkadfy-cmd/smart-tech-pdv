@@ -1,0 +1,53 @@
+{
+  "name": "smart-tech-pdv",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 0.0.0.0 --port 1420",
+    "build": "tsc -b && vite build",
+    "type-check": "tsc --noEmit",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "tauri:build:local": "cross-env SKIP_UPDATER_CHECK=1 tauri build --debug",
+    "version:bump": "node ./scripts/bump-app-version.mjs",
+    "release:ready": "node ./scripts/check-release-readiness.mjs",
+    "release:check": "node ./scripts/check-release.mjs",
+    "release:desktop": "node ./scripts/release-desktop.mjs",
+    "release:github": "node ./scripts/release-github.mjs",
+    "release:env": "powershell -ExecutionPolicy Bypass -File ./scripts/load-release-env.ps1",
+    "release:github:ps": "powershell -ExecutionPolicy Bypass -File ./scripts/release-github.ps1",
+    "cloud:dev": "npm run start:dev --prefix cloud",
+    "cloud:build": "npm run build --prefix cloud"
+  },
+  "dependencies": {
+    "@radix-ui/react-tabs": "^1.1.2",
+    "@tanstack/react-table": "^8.21.2",
+    "@tauri-apps/api": "^2.2.0",
+    "@tauri-apps/plugin-sql": "2.4.0",
+    "@tauri-apps/plugin-updater": "^2.2.1",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.469.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^7.1.1",
+    "recharts": "^2.15.0",
+    "tailwind-merge": "^2.5.5",
+    "zod": "^3.24.1",
+    "zustand": "^5.0.2"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.2.5",
+    "@types/node": "^22.10.2",
+    "@types/react": "^18.3.18",
+    "@types/react-dom": "^18.3.5",
+    "@vitejs/plugin-react-swc": "^3.7.2",
+    "autoprefixer": "^10.4.20",
+    "cross-env": "^7.0.3",
+    "postcss": "^8.4.49",
+    "tailwindcss": "^3.4.17",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.5"
+  }
+}
