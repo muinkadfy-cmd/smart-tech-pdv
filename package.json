@@ -1,7 +1,7 @@
 {
   "name": "smart-tech-pdv",
   "private": true,
-  "version": "2.0.9",
+  "version": "2.0.10",
   "type": "module",
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port 1420",
@@ -41,7 +41,7 @@
     "zustand": "^5.0.2"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.2.5",
+    "@tauri-apps/cli": "^2.10.1",
     "@types/node": "^22.10.2",
     "@types/react": "^18.3.18",
     "@types/react-dom": "^18.3.5",
