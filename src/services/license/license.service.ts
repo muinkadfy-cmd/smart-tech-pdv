@@ -1,11 +1,15 @@
 /**
- * Ativacao e validacao de licenca: online quando possivel;
+ * Ativação e validação de licença: online quando possível;
  * snapshot em license_snapshot + tolerancia offline (grace).
  */
 import { CLOUD_API_BASE_URL, getCloudModeLabel, isCloudApiConfigured } from "@/config/app";
 import { licenseSnapshotRepository } from "@/repositories/license-snapshot-repository";
 import type { LicenseStatus } from "@/stores/license-store";
 import { useLicenseStore } from "@/stores/license-store";
+import type { LicensePackageType } from "@/stores/auth-store";
+
+const SUPABASE_TRIAL_DAYS = 15;
+const SUPABASE_GRACE_DAYS = 3;
 
 export interface ActivationCloudResponse {
   installationId: string;
@@ -26,7 +30,17 @@ export interface ActivationResult {
     expiresAt: string | null;
     offlineGraceUntil: string | null;
     installationId: string | null;
+    source?: string | null;
   };
+}
+
+export interface SupabasePackageLicenseInput {
+  userId: string;
+  email: string;
+  fullName: string;
+  tenantId?: string | null;
+  packageType: LicensePackageType;
+  trialStartedAt?: string | null;
 }
 
 function mapStatus(s: string): LicenseStatus {
@@ -46,6 +60,45 @@ function planLabelFrom(data: ActivationCloudResponse): string {
   return data.planLabel ?? data.planCode ?? "Profissional";
 }
 
+function toIsoWithDays(baseDate: string | null | undefined, days: number) {
+  const date = baseDate && !Number.isNaN(Date.parse(baseDate)) ? new Date(baseDate) : new Date();
+  date.setDate(date.getDate() + days);
+  return date.toISOString();
+}
+
+function resolveSupabasePackageSnapshot(input: SupabasePackageLicenseInput) {
+  const installationId = `sb-${input.userId}`;
+  const tenantId = input.tenantId?.trim() || `tenant-${input.userId}`;
+
+  if (input.packageType === "permanent") {
+    return {
+      installationId,
+      tenantId,
+      status: "active" as LicenseStatus,
+      planLabel: "Licença permanente",
+      expiresAt: null,
+      offlineGraceUntil: null
+    };
+  }
+
+  const trialStartedAt = input.trialStartedAt ?? new Date().toISOString();
+  const expiresAt = toIsoWithDays(trialStartedAt, SUPABASE_TRIAL_DAYS);
+  const offlineGraceUntil = toIsoWithDays(expiresAt, SUPABASE_GRACE_DAYS);
+  const now = Date.now();
+  const expiresAtTime = Date.parse(expiresAt);
+  const graceTime = Date.parse(offlineGraceUntil);
+  const status: LicenseStatus = now <= expiresAtTime ? "active" : now <= graceTime ? "grace" : "expired";
+
+  return {
+    installationId,
+    tenantId,
+    status,
+    planLabel: "Trial 15 dias",
+    expiresAt,
+    offlineGraceUntil
+  };
+}
+
 export const licenseService = {
   async activateWithKey(activationKey: string): Promise<ActivationResult> {
     const key = activationKey.trim();
@@ -54,7 +107,7 @@ export const licenseService = {
     }
 
     if (!isCloudApiConfigured()) {
-      return { ok: false, message: "Endpoint cloud nao configurado. Use o modo local/offline para liberar a operacao no PC." };
+      return { ok: false, message: "Endpoint cloud não configurado. Use o modo local/offline para liberar a operação no PC." };
     }
 
     try {
@@ -88,7 +141,7 @@ export const licenseService = {
           }
         });
       } catch {
-        /* Preview no navegador sem Tauri/SQLite: licenca so em memoria nesta sessao */
+        /* Preview no navegador sem Tauri/SQLite: licença só em memória nesta sessão */
       }
 
       return {
@@ -98,11 +151,12 @@ export const licenseService = {
           planLabel: planLabelFrom(data),
           expiresAt: data.expiresAt ?? null,
           offlineGraceUntil: data.offlineGraceUntil ?? null,
-          installationId: data.installationId
+          installationId: data.installationId,
+          source: "activation"
         }
       };
     } catch (e) {
-      const message = e instanceof Error ? e.message : "Falha de rede na ativacao";
+      const message = e instanceof Error ? e.message : "Falha de rede na ativação";
       return { ok: false, message };
     }
   },
@@ -128,7 +182,7 @@ export const licenseService = {
         }
       });
     } catch {
-      /* em preview web sem SQLite, segue apenas em memoria */
+      /* em preview web sem SQLite, segue apenas em memória */
     }
 
     useLicenseStore.getState().setSnapshot({
@@ -136,7 +190,8 @@ export const licenseService = {
       planLabel: "Modo local offline",
       expiresAt: null,
       offlineGraceUntil,
-      installationId
+      installationId,
+      source: "local-mode"
     });
   },
 
@@ -147,12 +202,14 @@ export const licenseService = {
     }
 
     let planLabel = row.plan_code ?? "Modo local";
+    let source: string | null = null;
     if (row.payload_json) {
       try {
-        const parsed = JSON.parse(row.payload_json) as { planLabel?: string };
+        const parsed = JSON.parse(row.payload_json) as { planLabel?: string; source?: string };
         if (parsed.planLabel) {
           planLabel = String(parsed.planLabel);
         }
+        source = typeof parsed.source === "string" ? parsed.source : null;
       } catch {
         /* ignore */
       }
@@ -163,7 +220,8 @@ export const licenseService = {
       planLabel,
       expiresAt: row.expires_at,
       offlineGraceUntil: row.offline_grace_until,
-      installationId: row.installation_id
+      installationId: row.installation_id,
+      source
     });
   },
 
@@ -175,6 +233,17 @@ export const licenseService = {
     const row = await licenseSnapshotRepository.load();
     if (!row?.installation_id || !row.tenant_id) {
       return;
+    }
+
+    if (row.payload_json) {
+      try {
+        const payload = JSON.parse(row.payload_json) as { source?: string };
+        if (payload.source === "supabase-auth") {
+          return;
+        }
+      } catch {
+        /* ignore */
+      }
     }
 
     try {
@@ -199,7 +268,41 @@ export const licenseService = {
       });
       await licenseService.hydrateStoreFromDatabase();
     } catch {
-      /* offline ou API indisponivel */
+      /* offline ou API indisponível */
     }
+  },
+
+  async applySupabasePackageLicense(input: SupabasePackageLicenseInput): Promise<void> {
+    const snapshot = resolveSupabasePackageSnapshot(input);
+
+    try {
+      await licenseSnapshotRepository.upsert({
+        installationId: snapshot.installationId,
+        tenantId: snapshot.tenantId,
+        planLabel: snapshot.planLabel,
+        status: snapshot.status,
+        expiresAt: snapshot.expiresAt,
+        offlineGraceUntil: snapshot.offlineGraceUntil,
+        payload: {
+          source: "supabase-auth",
+          at: new Date().toISOString(),
+          planLabel: snapshot.planLabel,
+          packageType: input.packageType,
+          email: input.email,
+          fullName: input.fullName
+        }
+      });
+    } catch {
+      /* em preview sem SQLite segue em memória */
+    }
+
+    useLicenseStore.getState().setSnapshot({
+      status: snapshot.status,
+      planLabel: snapshot.planLabel,
+      expiresAt: snapshot.expiresAt,
+      offlineGraceUntil: snapshot.offlineGraceUntil,
+      installationId: snapshot.installationId,
+      source: "supabase-auth"
+    });
   }
 };

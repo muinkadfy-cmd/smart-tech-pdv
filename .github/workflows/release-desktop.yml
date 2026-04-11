@@ -59,4 +59,5 @@ jobs:
             release/*/*.msi
             release/*/*.sig
             release/*/latest.json
-          generate_release_notes: true
+            release/*/release-notes.md
+          body_path: release/latest-release-notes.md

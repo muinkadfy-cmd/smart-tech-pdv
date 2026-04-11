@@ -29,7 +29,7 @@ export function filterPdvProducts(products: Product[], query: string, focus: Ope
 
 export function buildPdvSummary(subtotal: number, total: number, selectedCustomer: Customer | undefined, itemsCount: number): PdvSummaryCard[] {
   return [
-    { label: "Cliente", value: selectedCustomer?.name ?? "Consumidor final", helper: selectedCustomer ? "Cadastro vinculado a venda" : "Venda rapida sem identificacao" },
+    { label: "Cliente", value: selectedCustomer?.name ?? "Consumidor final", helper: selectedCustomer ? "Cadastro vinculado a venda" : "Venda rápida sem identificação" },
     { label: "Itens", value: String(itemsCount), helper: "Quantidade total no carrinho" },
     { label: "Subtotal", value: subtotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), helper: "Antes de descontos" },
     { label: "Total", value: total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), helper: "Valor final para fechamento" }
@@ -50,7 +50,7 @@ export function buildRecentSaleHistory(sales: Sale[], customers: Customer[]): Pd
 export function buildThermalPreview(cart: CartItem[], total: number) {
   return [
     "SMART TECH PDV",
-    "Cupom nao fiscal",
+    "Cupom não fiscal",
     ...cart.map((item) => `${item.name} ${item.size} x${item.quantity}`),
     `TOTAL ${total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}`
   ];

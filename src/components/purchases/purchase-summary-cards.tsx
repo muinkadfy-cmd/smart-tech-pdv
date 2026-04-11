@@ -3,13 +3,13 @@ import type { PurchaseSummaryCard } from "@/features/purchases/purchase.service"
 
 export function PurchaseSummaryCards({ cards }: { cards: PurchaseSummaryCard[] }) {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
       {cards.map((card) => (
-        <Card className="border-white/80 bg-white/90" key={card.label}>
+        <Card className="workspace-strip" key={card.label}>
           <CardContent className="space-y-2 p-5">
-            <p className="text-sm text-muted-foreground">{card.label}</p>
-            <p className="font-display text-3xl font-semibold text-slate-950">{card.value}</p>
-            <p className="text-sm text-muted-foreground">{card.helper}</p>
+            <p className="text-[11px] uppercase tracking-[0.18em] text-muted-foreground">{card.label}</p>
+            <p className="font-display text-3xl font-semibold text-slate-50">{card.value}</p>
+            <p className="text-sm leading-6 text-muted-foreground">{card.helper}</p>
           </CardContent>
         </Card>
       ))}

@@ -1,5 +1,5 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ProductImagePlaceholder } from "@/components/shared/product-image-placeholder";
+import { ProductImagePreview } from "@/components/shared/product-image-preview";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatDate } from "@/lib/utils";
 import type { Product, StockMovement } from "@/types/domain";
@@ -16,7 +16,7 @@ export function StockMovementsList({ products, movements }: StockMovementsListPr
     <Card className="executive-panel">
       <CardHeader>
         <CardTitle>Movimentacoes recentes</CardTitle>
-        <CardDescription>Historico objetivo para auditoria de estoque e conferencia.</CardDescription>
+        <CardDescription>Histórico objetivo para auditoria de estoque e conferência.</CardDescription>
       </CardHeader>
       <CardContent className="p-0">
         <Table>
@@ -34,10 +34,12 @@ export function StockMovementsList({ products, movements }: StockMovementsListPr
               <TableRow key={movement.id}>
                 <TableCell>
                   <div className="flex items-center gap-3">
-                    <ProductImagePlaceholder
+                    <ProductImagePreview
                       compact
                       className="w-[118px]"
+                      imageDataUrl={productMap[movement.productId]?.imageDataUrl}
                       imageHint={productMap[movement.productId]?.imageHint}
+                      modalDescription="Foto real ampliada do item movimentado para conferência local."
                       name={productMap[movement.productId]?.name ?? movement.productId}
                       sector={productMap[movement.productId]?.sector}
                     />

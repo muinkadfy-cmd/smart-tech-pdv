@@ -6,7 +6,27 @@ import { spawnSync } from "node:child_process";
 const root = process.cwd();
 const npmCli = path.join(path.dirname(process.execPath), "node_modules", "npm", "bin", "npm-cli.js");
 const skipBuild = process.argv.includes("--skip-build");
-const repo = process.env.GITHUB_RELEASES_REPO || "muinkadfy-cmd/smart-tech-pdv-3";
+const allowExistingVersion = process.argv.includes("--allow-existing-version");
+const repo = process.env.GITHUB_RELEASES_REPO || "muinkadfy-cmd/smart-tech-pdv";
+
+function getGitOutput(args) {
+  const result = spawnSync("git", args, {
+    cwd: root,
+    shell: false,
+    env: process.env,
+    encoding: "utf8"
+  });
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  return (result.stdout ?? "").trim();
+}
+
+function getGitTagCommit(tagName) {
+  return getGitOutput(["show-ref", "--verify", "--hash", `refs/tags/${tagName}`]);
+}
 
 async function findFile(dir, matcher) {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -42,6 +62,15 @@ if (!versionMatch) {
   throw new Error("Unable to resolve APP_VERSION from src/config/app.ts");
 }
 const version = versionMatch[1];
+const tagName = `v${version}`;
+const headCommit = getGitOutput(["rev-parse", "HEAD"]);
+const tagCommit = getGitTagCommit(tagName);
+
+if (!allowExistingVersion && headCommit && tagCommit && headCommit !== tagCommit) {
+  throw new Error(
+    `A versao ${version} ja foi marcada em ${tagName}, mas o codigo atual mudou depois disso. Faca bump de versao antes de gerar outro pacote para o updater.`
+  );
+}
 
 const bundleDir = path.join(root, "src-tauri", "target", "release", "bundle", "msi");
 const msiPath = await findFile(bundleDir, (name) => name.endsWith(".msi"));
@@ -51,10 +80,12 @@ if (!msiPath) {
 
 const sigPath = existsSync(`${msiPath}.sig`)
   ? `${msiPath}.sig`
-  : await findFile(bundleDir, (name, fullPath) => name.endsWith(".sig") && fullPath.includes(version));
+  : await findFile(bundleDir, (name, fullPath) => name.endsWith(".sig") && (fullPath.includes(version) || fullPath.includes(path.basename(msiPath, ".msi"))));
 
 if (!sigPath) {
-  throw new Error("No updater signature artifact was found for the built MSI.");
+  throw new Error(
+    "No updater signature artifact was found for the built MSI. Enable bundle.createUpdaterArtifacts in src-tauri/tauri.conf.json and confirm the signing secrets are present in the environment."
+  );
 }
 
 const releaseDir = path.join(root, "release", version);
@@ -68,10 +99,27 @@ const releaseSig = path.join(releaseDir, sigName);
 await cp(msiPath, releaseMsi, { force: true });
 await cp(sigPath, releaseSig, { force: true });
 
+const notesPath = path.join(root, "release-notes", `v${version}.md`);
+if (!existsSync(notesPath)) {
+  const notesBuild = spawnSync(process.execPath, ["./scripts/generate-release-notes.mjs", `--version=${version}`, `--output=${notesPath}`], {
+    cwd: root,
+    stdio: "inherit",
+    env: process.env
+  });
+
+  if (notesBuild.status !== 0) {
+    process.exit(notesBuild.status ?? 1);
+  }
+}
+
+const releaseNotes = (await readFile(notesPath, "utf8")).trim();
+await cp(notesPath, path.join(releaseDir, "release-notes.md"), { force: true });
+await cp(notesPath, path.join(root, "release", "latest-release-notes.md"), { force: true });
+
 const signature = (await readFile(sigPath, "utf8")).trim();
 const latest = {
   version,
-  notes: `Release ${version}`,
+  notes: releaseNotes.split(/\r?\n/).slice(0, 4).join(" ").trim(),
   pub_date: new Date().toISOString(),
   platforms: {
     "windows-x86_64": {

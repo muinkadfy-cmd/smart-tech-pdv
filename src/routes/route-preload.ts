@@ -15,6 +15,7 @@ const routeImporters = {
   "/impressao": () => import("@/pages/printing/printing-page"),
   "/atualizacoes": () => import("@/pages/updates/updates-page"),
   "/diagnostico": () => import("@/pages/diagnostics/diagnostics-page"),
+  "/login": () => import("@/pages/auth/login-page"),
   "/ativacao": () => import("@/pages/activation/activation-page"),
   "*": () => import("@/pages/not-found-page")
 } as const;

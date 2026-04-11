@@ -19,20 +19,20 @@ import {
 import type { NavItem } from "@/types/domain";
 
 export const navigationItems: NavItem[] = [
-  { label: "Painel", path: "/dashboard", group: "Operacao", icon: LayoutDashboard },
-  { label: "Produtos", path: "/produtos", group: "Operacao", icon: PackageSearch },
-  { label: "Estoque", path: "/estoque", group: "Operacao", icon: Boxes },
-  { label: "PDV", path: "/pdv", group: "Operacao", icon: ShoppingCart, badge: "F2" },
-  { label: "Pedidos", path: "/pedidos", group: "Operacao", icon: ClipboardList },
-  { label: "Clientes", path: "/clientes", group: "Cadastros", icon: Users },
-  { label: "Fornecedores", path: "/fornecedores", group: "Cadastros", icon: Truck },
-  { label: "Compras", path: "/compras", group: "Gestao", icon: ShoppingBag },
-  { label: "Relatorios", path: "/relatorios", group: "Gestao", icon: BarChart3 },
-  { label: "Financeiro", path: "/financeiro", group: "Gestao", icon: WalletCards },
-  { label: "Configuracoes", path: "/configuracoes", group: "Sistema", icon: Settings },
-  { label: "Licenca e sync", path: "/licenca-sincronizacao", group: "Sistema", icon: Cloud },
-  { label: "Backup", path: "/backup", group: "Sistema", icon: HardDrive },
-  { label: "Impressao", path: "/impressao", group: "Sistema", icon: Printer },
-  { label: "Atualizacoes", path: "/atualizacoes", group: "Sistema", icon: RefreshCcw },
-  { label: "Diagnostico", path: "/diagnostico", group: "Sistema", icon: Activity }
+  { label: "Painel", path: "/dashboard", group: "Operação", icon: LayoutDashboard },
+  { label: "Produtos", path: "/produtos", group: "Operação", icon: PackageSearch, badge: "F3" },
+  { label: "Estoque", path: "/estoque", group: "Operação", icon: Boxes },
+  { label: "PDV", path: "/pdv", group: "Operação", icon: ShoppingCart },
+  { label: "Pedidos", path: "/pedidos", group: "Operação", icon: ClipboardList },
+  { label: "Clientes", path: "/clientes", group: "Cadastros", icon: Users, badge: "F5" },
+  { label: "Fornecedores", path: "/fornecedores", group: "Cadastros", icon: Truck, minRole: "admin" },
+  { label: "Compras", path: "/compras", group: "Gestão", icon: ShoppingBag, minRole: "admin" },
+  { label: "Relatórios", path: "/relatorios", group: "Gestão", icon: BarChart3, minRole: "admin" },
+  { label: "Financeiro", path: "/financeiro", group: "Gestão", icon: WalletCards, minRole: "admin" },
+  { label: "Configurações", path: "/configuracoes", group: "Sistema", icon: Settings, minRole: "admin" },
+  { label: "Licença e sincronização", path: "/licenca-sincronizacao", group: "Sistema", icon: Cloud, minRole: "super_admin" },
+  { label: "Backup", path: "/backup", group: "Sistema", icon: HardDrive, minRole: "super_admin" },
+  { label: "Impressão", path: "/impressao", group: "Sistema", icon: Printer, minRole: "admin" },
+  { label: "Atualizações", path: "/atualizacoes", group: "Sistema", icon: RefreshCcw, minRole: "super_admin" },
+  { label: "Diagnóstico", path: "/diagnostico", group: "Sistema", icon: Activity, minRole: "super_admin" }
 ];

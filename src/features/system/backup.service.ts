@@ -96,7 +96,7 @@ async function setMetaValue(key: string, value: string): Promise<void> {
 async function collectSqliteTables(): Promise<BackupTables> {
   const db = await getSqliteDatabase();
   if (!db) {
-    throw new Error("SQLite indisponivel para gerar backup completo.");
+    throw new Error("SQLite indisponível para gerar backup completo.");
   }
 
   const pairs = await Promise.all(
@@ -172,7 +172,7 @@ function isSqliteBackup(snapshot: BackupSnapshot): snapshot is BackupSnapshot & 
 async function clearAllTables(): Promise<void> {
   const db = await getSqliteDatabase();
   if (!db) {
-    throw new Error("Restauracao disponivel apenas no runtime desktop com SQLite.");
+    throw new Error("Restauração disponível apenas no runtime desktop com SQLite.");
   }
 
   for (const table of TABLES_IN_CLEAR_ORDER) {
@@ -215,9 +215,9 @@ function buildSummaryEntries(params: {
     { label: "Produtos", value: String(params.products) },
     { label: "Clientes", value: String(params.customers) },
     { label: "Vendas", value: String(params.sales) },
-    { label: "Movimentacoes", value: String(params.movements) },
-    { label: "Ultimo backup", value: params.lastExportAt ? formatDate(params.lastExportAt) : "Nenhum" },
-    { label: "Ultima restauracao", value: params.lastRestoreAt ? formatDate(params.lastRestoreAt) : "Nenhuma" }
+    { label: "Movimentações", value: String(params.movements) },
+    { label: "Último backup", value: params.lastExportAt ? formatDate(params.lastExportAt) : "Nenhum" },
+    { label: "Última restauração", value: params.lastRestoreAt ? formatDate(params.lastRestoreAt) : "Nenhuma" }
   ];
 }
 
@@ -242,7 +242,7 @@ export const backupService = {
         canRestore: true,
         lastExportAt,
         lastRestoreAt,
-        helper: "Backup completo em JSON com restauracao real sobre a base SQLite local.",
+        helper: "Backup completo em JSON com restauração real sobre a base SQLite local.",
         summary: buildSummaryEntries({
           products: Number(products[0]?.c ?? 0),
           customers: Number(customers[0]?.c ?? 0),
@@ -266,7 +266,7 @@ export const backupService = {
       canRestore: false,
       lastExportAt,
       lastRestoreAt,
-      helper: "Modo browser/demo exporta uma fotografia logica. Restauracao completa exige SQLite/Tauri.",
+      helper: "Modo browser/demo exporta uma fotografia lógica. Restauração completa exige SQLite/Tauri.",
       summary: buildSummaryEntries({
         products: products.length,
         customers: customers.length,
@@ -317,20 +317,20 @@ export const backupService = {
     try {
       parsed = JSON.parse(rawContent) as BackupSnapshot;
     } catch {
-      throw new Error("Arquivo invalido. O backup precisa estar em JSON valido.");
+      throw new Error("Arquivo inválido. O backup precisa estar em JSON válido.");
     }
 
     if (parsed.metadata?.format !== "smart-tech-backup-v1") {
-      throw new Error("Formato de backup nao reconhecido para este sistema.");
+      throw new Error("Formato de backup não reconhecido para este sistema.");
     }
 
     if (!isSqliteBackup(parsed)) {
-      throw new Error("Este arquivo nao contem as tabelas completas para restauracao no SQLite.");
+      throw new Error("Este arquivo não contém as tabelas completas para restauração no SQLite.");
     }
 
     const db = await getSqliteDatabase();
     if (!db) {
-      throw new Error("Restauração completa disponivel apenas no app desktop com SQLite.");
+      throw new Error("Restauração completa disponível apenas no app desktop com SQLite.");
     }
 
     await db.execute("PRAGMA foreign_keys = OFF");

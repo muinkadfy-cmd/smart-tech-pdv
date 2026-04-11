@@ -1,8 +1,9 @@
 import { flexRender, getCoreRowModel, useReactTable, type ColumnDef } from "@tanstack/react-table";
 import { getSectorLabel, getSectorUnitLabel } from "@/features/products/product.service";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { ProductImagePlaceholder } from "@/components/shared/product-image-placeholder";
+import { ProductImagePreview } from "@/components/shared/product-image-preview";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { formatCurrency } from "@/lib/utils";
 import type { Brand, Category, Product } from "@/types/domain";
@@ -11,9 +12,12 @@ interface ProductsTableProps {
   products: Product[];
   brands: Brand[];
   categories: Category[];
+  canManageCatalog?: boolean;
+  onEdit: (product: Product) => void;
+  onToggleStatus: (product: Product) => void;
 }
 
-export function ProductsTable({ products, brands, categories }: ProductsTableProps) {
+export function ProductsTable({ products, brands, categories, canManageCatalog = true, onEdit, onToggleStatus }: ProductsTableProps) {
   const brandMap = Object.fromEntries(brands.map((brand) => [brand.id, brand.name]));
   const categoryMap = Object.fromEntries(categories.map((category) => [category.id, category.name]));
 
@@ -23,10 +27,10 @@ export function ProductsTable({ products, brands, categories }: ProductsTablePro
       header: "Produto",
       cell: ({ row }) => (
         <div className="flex items-center gap-3">
-          <ProductImagePlaceholder compact imageHint={row.original.imageHint} name={row.original.name} sector={row.original.sector} className="w-[124px]" />
+          <ProductImagePreview compact className="w-[124px]" imageDataUrl={row.original.imageDataUrl} imageHint={row.original.imageHint} modalDescription="Foto real ampliada do produto para leitura comercial do catálogo." name={row.original.name} sector={row.original.sector} />
           <div className="space-y-1">
-            <p className="text-[14px] font-semibold text-slate-950">{row.original.name}</p>
-            <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-500">
+            <p className="text-[14px] font-semibold text-slate-50">{row.original.name}</p>
+            <div className="flex flex-wrap items-center gap-2 text-[12px] text-slate-400">
               <span>{row.original.sku}</span>
               <span>•</span>
               <span>{row.original.internalCode}</span>
@@ -52,23 +56,23 @@ export function ProductsTable({ products, brands, categories }: ProductsTablePro
     },
     {
       accessorKey: "salePrice",
-      header: "Preco",
+      header: "Preço",
       cell: ({ row }) => (
         <div className="space-y-0.5">
-          <p className="font-semibold text-slate-950">{formatCurrency(row.original.promotionalPrice ?? row.original.salePrice)}</p>
-          {row.original.promotionalPrice ? <p className="text-[11px] text-slate-500 line-through">{formatCurrency(row.original.salePrice)}</p> : null}
+          <p className="font-semibold text-slate-50">{formatCurrency(row.original.promotionalPrice ?? row.original.salePrice)}</p>
+          {row.original.promotionalPrice ? <p className="text-[11px] text-slate-400 line-through">{formatCurrency(row.original.salePrice)}</p> : null}
         </div>
       )
     },
     {
       id: "stock",
-      header: "Estoque",
+      header: "Saldo",
       cell: ({ row }) => {
         const units = row.original.variants.reduce((sum, variant) => sum + variant.stock, 0);
         return (
           <div className="space-y-0.5">
-            <p className="font-semibold text-slate-950">{units} {getSectorUnitLabel(row.original.sector)}</p>
-            <p className="text-[11px] text-slate-500">{row.original.variants.map((variant) => `${variant.size}:${variant.stock}`).slice(0, 4).join("  ·  ")}</p>
+            <p className="font-semibold text-slate-50">{units} {getSectorUnitLabel(row.original.sector)}</p>
+            <p className="text-[11px] text-slate-400">{row.original.variants.map((variant) => `${variant.size}:${variant.stock}`).slice(0, 4).join("  ·  ")}</p>
           </div>
         );
       }
@@ -81,6 +85,24 @@ export function ProductsTable({ products, brands, categories }: ProductsTablePro
           {row.original.status === "active" ? "Ativo" : "Inativo"}
         </Badge>
       )
+    },
+    {
+      id: "actions",
+      header: "Ações",
+      cell: ({ row }) => (
+        canManageCatalog ? (
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => onEdit(row.original)} size="sm" variant="outline">
+              Editar
+            </Button>
+            <Button onClick={() => onToggleStatus(row.original)} size="sm" variant="outline">
+              {row.original.status === "active" ? "Inativar" : "Reativar"}
+            </Button>
+          </div>
+        ) : (
+          <Badge variant="secondary">Somente leitura</Badge>
+        )
+      )
     }
   ];
 
@@ -91,7 +113,7 @@ export function ProductsTable({ products, brands, categories }: ProductsTablePro
   });
 
   return (
-    <Card className="border-white/80 bg-white/90">
+    <Card className="surface-rule overflow-hidden">
       <CardContent className="p-0">
         <Table>
           <TableHeader>
@@ -106,13 +128,19 @@ export function ProductsTable({ products, brands, categories }: ProductsTablePro
             ))}
           </TableHeader>
           <TableBody>
-            {table.getRowModel().rows.map((row) => (
+            {table.getRowModel().rows.length > 0 ? table.getRowModel().rows.map((row) => (
               <TableRow className="cursor-default" key={row.id}>
                 {row.getVisibleCells().map((cell) => (
                   <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
                 ))}
               </TableRow>
-            ))}
+            )) : (
+              <TableRow>
+                <TableCell className="py-10 text-center text-sm text-slate-400" colSpan={columns.length}>
+                  Nenhum produto encontrado com esse recorte. Revise filtros, status ou setor para continuar.
+                </TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </CardContent>

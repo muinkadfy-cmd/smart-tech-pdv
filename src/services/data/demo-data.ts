@@ -16,6 +16,7 @@ import type {
 } from "@/types/domain";
 import { formatCurrency } from "@/lib/utils";
 import { buildStockAlerts, buildStockCoverage } from "@/features/stock/stock.service";
+import { createLocalUserProfile, getDefaultLocalUsers, getDefaultUserProfile } from "@/lib/access-control";
 
 export const categories: Category[] = [
   { id: "sneakers", name: "Tenis", share: 22, sector: "calcados" },
@@ -308,6 +309,7 @@ export const customers: Customer[] = [
 
   {
     id: "c1",
+    status: "active",
     name: "Marina Queiroz",
     phone: "(11) 99444-2201",
     whatsapp: "(11) 99444-2201",
@@ -319,6 +321,7 @@ export const customers: Customer[] = [
   },
   {
     id: "c2",
+    status: "active",
     name: "Rafael Nunes",
     phone: "(11) 98111-1414",
     whatsapp: "(11) 98111-1414",
@@ -330,6 +333,7 @@ export const customers: Customer[] = [
   },
   {
     id: "c3",
+    status: "active",
     name: "Beatriz Ferraz",
     phone: "(11) 99772-8844",
     whatsapp: "(11) 99772-8844",
@@ -341,6 +345,7 @@ export const customers: Customer[] = [
   },
   {
     id: "c4",
+    status: "active",
     name: "Carlos Mendes",
     phone: "(11) 98822-4400",
     whatsapp: "(11) 98822-4400",
@@ -352,6 +357,7 @@ export const customers: Customer[] = [
   },
   {
     id: "c5",
+    status: "active",
     name: "Paula Siqueira",
     phone: "(11) 99555-7770",
     whatsapp: "(11) 99555-7770",
@@ -366,6 +372,7 @@ export const customers: Customer[] = [
 export const suppliers = [
   {
     id: "s1",
+    status: "active",
     name: "Urban Step Distribuicao",
     cnpj: "44.222.111/0001-10",
     contact: "Renata Sales",
@@ -375,6 +382,7 @@ export const suppliers = [
   },
   {
     id: "s2",
+    status: "active",
     name: "Atelier Sole Brasil",
     cnpj: "10.300.500/0001-20",
     contact: "Paulo Vinicius",
@@ -384,6 +392,7 @@ export const suppliers = [
   },
   {
     id: "s3",
+    status: "active",
     name: "Nord Footwear",
     cnpj: "08.777.444/0001-39",
     contact: "Lia Souto",
@@ -481,28 +490,55 @@ export const purchases: Purchase[] = [
   {
     id: "COMP-8801",
     supplierId: "s1",
+    productId: "p1",
     status: "recebida",
     total: 4290,
     receivedAt: "2026-04-01T15:00:00.000Z",
     createdAt: "2026-03-27T10:00:00.000Z",
-    items: 32
+    items: 32,
+    quantity: 32,
+    unitCost: 134.06,
+    lines: [
+      { id: "pi-8801-37", productId: "p1", size: "37", quantity: 8, unitCost: 134.06 },
+      { id: "pi-8801-38", productId: "p1", size: "38", quantity: 8, unitCost: 134.06 },
+      { id: "pi-8801-39", productId: "p1", size: "39", quantity: 8, unitCost: 134.06 },
+      { id: "pi-8801-40", productId: "p1", size: "40", quantity: 8, unitCost: 134.06 }
+    ]
   },
   {
     id: "COMP-8802",
     supplierId: "s2",
+    productId: "p3",
     status: "conferida",
     total: 3180,
     receivedAt: "2026-04-02T12:00:00.000Z",
     createdAt: "2026-03-29T08:40:00.000Z",
-    items: 18
+    items: 18,
+    quantity: 18,
+    unitCost: 176.67,
+    lines: [
+      { id: "pi-8802-p", productId: "p3", size: "P", quantity: 6, unitCost: 176.67 },
+      { id: "pi-8802-m", productId: "p3", size: "M", quantity: 6, unitCost: 176.67 },
+      { id: "pi-8802-g", productId: "p3", size: "G", quantity: 6, unitCost: 176.67 }
+    ]
   },
   {
     id: "COMP-8803",
     supplierId: "s3",
+    productId: "p4",
     status: "aberta",
     total: 5160,
     createdAt: "2026-04-03T08:15:00.000Z",
-    items: 25
+    items: 25,
+    quantity: 25,
+    unitCost: 206.4,
+    lines: [
+      { id: "pi-8803-37", productId: "p4", size: "37", quantity: 5, unitCost: 206.4 },
+      { id: "pi-8803-38", productId: "p4", size: "38", quantity: 5, unitCost: 206.4 },
+      { id: "pi-8803-39", productId: "p4", size: "39", quantity: 5, unitCost: 206.4 },
+      { id: "pi-8803-40", productId: "p4", size: "40", quantity: 5, unitCost: 206.4 },
+      { id: "pi-8803-41", productId: "p4", size: "41", quantity: 5, unitCost: 206.4 }
+    ]
   }
 ];
 
@@ -585,9 +621,48 @@ export const reportsSnapshot: ReportsSnapshot = {
 export const settingsSnapshot: SettingsSnapshot = {
   companyName: "Smart Tech Moda e Calcados",
   document: "12.345.678/0001-00",
+  legalName: "Smart Tech Moda e Calcados LTDA",
+  stateRegistration: "123.456.789.112",
+  companyPhone: "(11) 4003-1020",
+  companyWhatsapp: "(11) 99888-1020",
+  companyEmail: "operacao@smarttechpdv.local",
+  addressLine: "Rua do Comercio",
+  addressNumber: "245",
+  addressDistrict: "Centro",
+  addressCity: "Sao Paulo",
+  addressState: "SP",
+  addressPostalCode: "01010-100",
   theme: "Windows Contrast",
-  thermalPrinter58: "EPSON TM-T20 58mm",
-  thermalPrinter80: "ELGIN Flash 80mm",
+  activeLocalUserId: "local-admin-1",
+  localUsers: [
+    ...getDefaultLocalUsers(),
+    {
+      ...createLocalUserProfile({
+        id: "local-operador-1",
+        name: "Caixa principal",
+        role: "operador",
+        pin: "1020",
+        status: "active"
+      })
+    },
+    {
+      ...createLocalUserProfile({
+        id: "local-super-1",
+        name: "Suporte tecnico",
+        role: "super_admin",
+        pin: "9090",
+        status: "active"
+      })
+    }
+  ],
+  ...getDefaultUserProfile(),
+  notifyUpdates: "on",
+  notifyLowStock: "on",
+  notifyOrders: "on",
+  notifyFinance: "on",
+  notifySync: "on",
+  thermalPrinter58: "POS-RAM BT 58mm",
+  thermalPrinter80: "POS-RAM BT 80mm",
   defaultSalePrintTemplate: "tpl-58",
   defaultLabelTemplate: "tpl-label",
   salePrintBehavior: "preview",
@@ -600,6 +675,17 @@ export const diagnosticsSnapshot: DiagnosticsSnapshot = {
   updaterStatus: "Configurado para release GitHub com latest.json",
   lastBackupAt: "2026-04-02T22:00:00.000Z",
   environment: "DESKTOP_READY",
+  runtime: {
+    summary: {
+      totalEvents: 0,
+      errorCount: 0,
+      warningCount: 0,
+      infoCount: 0,
+      lastRecordedAt: null,
+      sources: []
+    },
+    events: []
+  },
   logs: [
     "[INFO] Shell inicializado com layout premium.",
     "[INFO] Repositorio mock habilitado para DEV e demo local.",

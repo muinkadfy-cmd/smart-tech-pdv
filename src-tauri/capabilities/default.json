@@ -9,6 +9,7 @@
     "shell:default",
     "updater:default",
     "sql:default",
+    "sql:allow-execute",
     "log:default"
   ]
 }

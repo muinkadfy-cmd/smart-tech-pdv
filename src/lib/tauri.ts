@@ -16,3 +16,21 @@ export async function getRuntimeAppVersion() {
     return APP_VERSION;
   }
 }
+
+export async function finalizeInstalledUpdate() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  if (!isTauriRuntime()) {
+    window.location.reload();
+    return;
+  }
+
+  try {
+    const { getCurrentWindow } = await import("@tauri-apps/api/window");
+    await getCurrentWindow().close();
+  } catch {
+    window.location.reload();
+  }
+}

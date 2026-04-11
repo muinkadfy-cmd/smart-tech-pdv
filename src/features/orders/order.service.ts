@@ -22,6 +22,29 @@ export interface OrderPriorityItem {
   priority: "alta" | "media" | "baixa";
 }
 
+export function getOrderPriorityLabel(priority: OrderPriorityItem["priority"]) {
+  if (priority === "alta") return "Prioridade alta";
+  if (priority === "media") return "Prioridade média";
+  return "Prioridade baixa";
+}
+
+export function getOrderStatusLabel(status: Order["status"]) {
+  switch (status) {
+    case "novo":
+      return "Novo";
+    case "em separacao":
+      return "Em separação";
+    case "pronto":
+      return "Pronto";
+    case "entregue":
+      return "Entregue";
+    case "cancelado":
+      return "Cancelado";
+    default:
+      return status;
+  }
+}
+
 export function buildOrderSummary(orders: Order[]) {
   const openOrders = orders.filter((order) => order.status === "novo" || order.status === "em separacao").length;
   const readyOrders = orders.filter((order) => order.status === "pronto").length;
@@ -29,9 +52,9 @@ export function buildOrderSummary(orders: Order[]) {
   const totalValue = orders.reduce((sum, order) => sum + order.value, 0);
 
   const cards: OrderSummaryCard[] = [
-    { label: "Pedidos abertos", value: String(openOrders), helper: "Aguardando separacao ou andamento" },
-    { label: "Prontos", value: String(readyOrders), helper: "Ja podem ser retirados ou expedidos" },
-    { label: "Entregues", value: String(deliveredOrders), helper: "Concluidos no recorte atual" },
+    { label: "Pedidos abertos", value: String(openOrders), helper: "Aguardando separação ou andamento" },
+    { label: "Prontos", value: String(readyOrders), helper: "Já podem ser retirados ou expedidos" },
+    { label: "Entregues", value: String(deliveredOrders), helper: "Concluídos no recorte atual" },
     { label: "Valor em pedidos", value: totalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), helper: "Carteira operacional monitorada" }
   ];
 
@@ -60,9 +83,9 @@ export function buildOrderPriorityList(orders: Order[], customers: Customer[]): 
       return {
         id: order.id,
         customerName: customerMap[order.customerId] ?? order.customerId,
-        status: order.status,
+        status: getOrderStatusLabel(order.status),
         totalLabel: order.value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }),
-        ageLabel: `${Math.floor(hoursOpen)}h desde ultima acao`,
+        ageLabel: `Há ${Math.floor(hoursOpen)}h sem nova ação`,
         priority
       };
     })
@@ -76,9 +99,9 @@ export function buildOrderTimeline(order: Order | undefined, customers: Customer
 
   const customer = customers.find((item) => item.id === order.customerId);
   return [
-    { id: `${order.id}-1`, title: "Pedido registrado", description: `Cliente ${customer?.name ?? "nao identificado"} entrou na fila operacional.`, tone: "default" },
-    { id: `${order.id}-2`, title: "Separacao iniciada", description: `Pedido com ${order.items} itens em conferencia interna.`, tone: order.status === "novo" ? "warning" : "default" },
+    { id: `${order.id}-1`, title: "Pedido registrado", description: `Cliente ${customer?.name ?? "não identificado"} entrou na fila operacional.`, tone: "default" },
+    { id: `${order.id}-2`, title: "Separação iniciada", description: `Pedido com ${order.items} itens em conferência interna.`, tone: order.status === "novo" ? "warning" : "default" },
     { id: `${order.id}-3`, title: "Pagamento validado", description: `Valor total de ${order.value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}.`, tone: "success" },
-    { id: `${order.id}-4`, title: "Status atual", description: `Pedido marcado como ${order.status}.`, tone: order.status === "pronto" || order.status === "entregue" ? "success" : "warning" }
+    { id: `${order.id}-4`, title: "Status atual", description: `Pedido marcado como ${getOrderStatusLabel(order.status)}.`, tone: order.status === "pronto" || order.status === "entregue" ? "success" : "warning" }
   ];
 }

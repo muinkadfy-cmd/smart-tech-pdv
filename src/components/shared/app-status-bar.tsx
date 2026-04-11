@@ -1,4 +1,4 @@
-import { Clock3, Cloud, DatabaseZap, WifiOff } from "lucide-react";
+import { Activity, Clock3, Cloud, DatabaseZap, ShieldCheck, WifiOff } from "lucide-react";
 import { useMemo } from "react";
 import { useLocation } from "react-router-dom";
 import { Badge } from "@/components/ui/badge";
@@ -16,16 +16,29 @@ function getSectionLabel(pathname: string) {
     "/clientes": "Clientes",
     "/fornecedores": "Fornecedores",
     "/compras": "Compras",
-    "/relatorios": "Relatorios",
+    "/relatorios": "Relatórios",
     "/financeiro": "Financeiro",
-    "/configuracoes": "Configuracoes",
-    "/licenca-sincronizacao": "Licenca e sync",
+    "/configuracoes": "Configurações",
+    "/licenca-sincronizacao": "Licença e sincronização",
     "/backup": "Backup",
-    "/impressao": "Impressao",
-    "/atualizacoes": "Atualizacoes",
-    "/diagnostico": "Diagnostico"
+    "/impressao": "Impressão",
+    "/atualizacoes": "Atualizações",
+    "/diagnostico": "Diagnóstico"
   };
   return map[pathname] ?? "Sistema";
+}
+
+function getLicenseLabel(licenseStatus: string) {
+  switch (licenseStatus) {
+    case "active":
+      return "Licença ativa";
+    case "grace":
+      return "Janela offline";
+    case "expired":
+      return "Licença expirada";
+    default:
+      return "Modo local";
+  }
 }
 
 export function AppStatusBar() {
@@ -44,23 +57,34 @@ export function AppStatusBar() {
   );
 
   return (
-    <div className="border-t border-border/90 bg-white/92 px-4 py-2 shadow-[0_-10px_26px_rgba(15,23,42,0.06)] backdrop-blur sm:px-6 lg:px-8">
-      <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-muted-foreground">
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-          <Badge className="px-2 py-0.5" variant="outline">
-            <DatabaseZap className="mr-1 h-3.5 w-3.5" />
-            SQLite local pronto
+    <div className="app-status-surface border-t border-[rgba(201,168,111,0.12)] px-4 py-2 sm:px-5 lg:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-2.5 text-[12px] text-slate-300">
+        <div className="app-status-primary flex flex-wrap items-center gap-2 sm:gap-2.5">
+          <Badge className="px-2.5 py-1" variant="outline">
+            <DatabaseZap className="mr-1.5 h-3.5 w-3.5" />
+            Base local pronta
           </Badge>
-          <Badge className="px-2 py-0.5" variant={online ? "success" : "secondary"}>
-            {online ? <Cloud className="mr-1 h-3.5 w-3.5" /> : <WifiOff className="mr-1 h-3.5 w-3.5" />}
-            {online ? "Conectado" : "Offline"}
+          <Badge className="px-2.5 py-1" variant={online ? "success" : "warning"}>
+            {online ? <Cloud className="mr-1.5 h-3.5 w-3.5" /> : <WifiOff className="mr-1.5 h-3.5 w-3.5" />}
+            {online ? "Cloud disponível" : "Offline"}
           </Badge>
-          <span>Area atual: <strong className="text-slate-900">{getSectionLabel(location.pathname)}</strong></span>
-          <span>Fila pendente: <strong className="text-slate-900">{pendingCount}</strong>{syncing ? " · enviando" : ""}</span>
+          <Badge className="px-2.5 py-1" variant={syncing ? "warning" : pendingCount > 0 ? "outline" : "secondary"}>
+            <Activity className="mr-1.5 h-3.5 w-3.5" />
+            {syncing ? "Sincronizando" : pendingCount > 0 ? `${pendingCount} na fila` : "Fila em dia"}
+          </Badge>
+          <span className="app-status-section-chip rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] tracking-[0.01em] text-slate-300">
+            Área atual: <strong className="text-slate-100">{getSectionLabel(location.pathname)}</strong>
+          </span>
         </div>
-        <div className="flex flex-wrap items-center gap-3">
-          <span>Licenca: <strong className="text-slate-900">{licenseStatus === "unknown" ? "local" : licenseStatus}</strong></span>
-          <span className="inline-flex items-center gap-1"><Clock3 className="h-3.5 w-3.5" /> {nowLabel}</span>
+        <div className="app-status-secondary flex flex-wrap items-center gap-2.5">
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] text-slate-300">
+            <ShieldCheck className="h-3.5 w-3.5 text-[#e7d3a7]" />
+            <strong className="text-slate-100">{getLicenseLabel(licenseStatus)}</strong>
+          </span>
+          <span className="inline-flex items-center gap-1.5 rounded-full border border-white/8 bg-white/[0.03] px-3 py-1 text-[11px] text-slate-300">
+            <Clock3 className="h-3.5 w-3.5" />
+            {nowLabel}
+          </span>
         </div>
       </div>
     </div>

@@ -29,7 +29,7 @@ export function buildPurchaseSummary(purchases: Purchase[]) {
   const total = purchases.reduce((sum, purchase) => sum + purchase.total, 0);
 
   const cards: PurchaseSummaryCard[] = [
-    { label: "Compras abertas", value: String(open), helper: "Aguardando conferencia ou recebimento" },
+    { label: "Compras abertas", value: String(open), helper: "Aguardando conferência ou recebimento" },
     { label: "Conferidas", value: String(checked), helper: "Ja passaram por validacao inicial" },
     { label: "Recebidas", value: String(received), helper: "Lotes finalizados no estoque" },
     { label: "Volume financeiro", value: total.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }), helper: "Compromisso atual com fornecedores" }

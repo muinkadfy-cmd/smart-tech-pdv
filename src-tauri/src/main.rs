@@ -34,6 +34,24 @@ fn main() {
             sql: include_str!("../migrations/0005_catalogo_moda_consistente.sql"),
             kind: MigrationKind::Up,
         },
+        Migration {
+            version: 6,
+            description: "product_image_upload",
+            sql: include_str!("../migrations/0006_product_image_upload.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 7,
+            description: "customer_supplier_status",
+            sql: include_str!("../migrations/0007_customer_supplier_status.sql"),
+            kind: MigrationKind::Up,
+        },
+        Migration {
+            version: 8,
+            description: "purchase_item_size",
+            sql: include_str!("../migrations/0008_purchase_item_size.sql"),
+            kind: MigrationKind::Up,
+        },
     ];
 
     let mut builder = tauri::Builder::default()
@@ -46,9 +64,7 @@ fn main() {
                 .build(),
         );
 
-    if !cfg!(debug_assertions) {
-        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
-    }
+    builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
 
     builder
         .run(tauri::generate_context!())

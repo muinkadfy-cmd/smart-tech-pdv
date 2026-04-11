@@ -3,14 +3,14 @@ import type { DiagnosticsChecklistItem } from "@/features/diagnostics/diagnostic
 
 export function DiagnosticsChecklistPanel({ items }: { items: DiagnosticsChecklistItem[] }) {
   return (
-    <Card className="border-white/80 bg-white/90">
+    <Card className="surface-rule">
       <CardHeader>
-        <CardTitle>Checklist tecnico</CardTitle>
+        <CardTitle>Checklist técnico</CardTitle>
       </CardHeader>
       <CardContent className="space-y-3">
         {items.map((item) => (
-          <div className="rounded-2xl bg-secondary/45 p-4" key={item.id}>
-            <p className="font-semibold text-slate-950">{item.title}</p>
+          <div className="premium-tile rounded-2xl p-4" key={item.id}>
+            <p className="font-semibold text-slate-50">{item.title}</p>
             <p className="mt-2 text-sm text-muted-foreground">{item.helper}</p>
           </div>
         ))}

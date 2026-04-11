@@ -38,7 +38,7 @@ export async function getOfflineReadinessSnapshot(): Promise<OfflineReadinessSna
       id: "desktop-runtime",
       label: "Runtime desktop",
       ok: isTauriRuntime(),
-      helper: isTauriRuntime() ? "Tauri ativo: SQLite, backup e updater completos na maquina." : "No navegador a operacao fica limitada e nao representa a entrega desktop." 
+      helper: isTauriRuntime() ? "Tauri ativo: SQLite, backup e updater completos na máquina." : "No navegador a operação fica limitada e não representa a entrega desktop." 
     },
     {
       id: "local-database",
@@ -78,12 +78,12 @@ export async function getOfflineReadinessSnapshot(): Promise<OfflineReadinessSna
       label: "Cloud publico para futuras melhorias",
       ok: !/localhost|127\.0\.0\.1/i.test(CLOUD_API_BASE_URL),
       helper: /localhost|127\.0\.0\.1/i.test(CLOUD_API_BASE_URL)
-        ? "Ainda esta em localhost. Isso nao impede o offline, mas a nuvem final ainda precisa ser publicada."
+        ? "Ainda está em localhost. Isso não impede o offline, mas a nuvem final ainda precisa ser publicada."
         : `Endpoint publico configurado em ${CLOUD_API_BASE_URL}.`
     },
     {
       id: "sync-target",
-      label: "Identidade de instalacao",
+      label: "Identidade de instalação",
       ok: Boolean(syncTarget?.installationId),
       helper: syncTarget?.installationId ? `Instalacao ${syncTarget.installationId} pronta para fila de sync.` : "Sem installationId ativo ainda. Operacao offline continua funcionando."
     }
@@ -96,7 +96,7 @@ export async function getOfflineReadinessSnapshot(): Promise<OfflineReadinessSna
   const blockers = coreChecks.filter((check) => !check.ok).map((check) => check.label);
   const headline = ready
     ? "Parte offline pronta para o cliente trabalhar, com base local, backup e recurso de atualizacao ja encaixados."
-    : "Offline ainda nao esta totalmente fechado. Corrija os bloqueios abaixo antes de considerar pronto para uso de cliente.";
+    : "Offline ainda não está totalmente fechado. Corrija os bloqueios abaixo antes de considerar pronto para uso de cliente.";
 
   return {
     score,

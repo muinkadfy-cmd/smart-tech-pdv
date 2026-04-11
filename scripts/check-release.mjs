@@ -12,12 +12,16 @@ if (!versionMatch) {
 const version = versionMatch[1];
 const releaseDir = path.join(root, "release", version);
 const latestJsonPath = path.join(releaseDir, "latest.json");
+const releaseNotesPath = path.join(releaseDir, "release-notes.md");
 
 if (!existsSync(releaseDir)) {
   throw new Error(`Release directory missing: ${releaseDir}`);
 }
 if (!existsSync(latestJsonPath)) {
   throw new Error("latest.json not found in release directory");
+}
+if (!existsSync(releaseNotesPath)) {
+  throw new Error("release-notes.md not found in release directory");
 }
 
 const directoryEntries = await readdir(releaseDir);
@@ -34,6 +38,9 @@ if (latest.version !== version) {
 }
 if (!latest.platforms?.["windows-x86_64"]?.url) {
   throw new Error("latest.json is missing the windows-x86_64 updater URL");
+}
+if (typeof latest.notes !== "string" || latest.notes.trim().length === 0) {
+  throw new Error("latest.json is missing summary notes for the updater");
 }
 
 console.log(`Release ${version} looks valid.`);

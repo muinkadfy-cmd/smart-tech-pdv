@@ -3,6 +3,7 @@ import { Component, type ErrorInfo, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { recordRuntimeDiagnostic } from "@/services/diagnostics/runtime-diagnostics.service";
 
 type RouteErrorBoundaryProps = {
   children: ReactNode;
@@ -21,6 +22,14 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryProps, RouteEr
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    recordRuntimeDiagnostic({
+      severity: "error",
+      source: "router",
+      title: "Falha ao renderizar rota",
+      message: error.message,
+      detail: errorInfo.componentStack ?? error.stack,
+      routePath: typeof window !== "undefined" ? window.location.pathname : "/"
+    });
     console.error("[RouteErrorBoundary] Falha ao renderizar rota", error, errorInfo);
   }
 
@@ -34,14 +43,14 @@ class RouteErrorBoundaryInner extends Component<RouteErrorBoundaryProps, RouteEr
     if (this.state.hasError) {
       return (
         <div className="p-6">
-          <Card className="border-white/80 bg-white/95 shadow-card">
+          <Card className="surface-rule shadow-card">
             <CardContent className="flex flex-col gap-4 p-6">
               <div className="flex items-start gap-3">
                 <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
                   <AlertTriangle className="h-5 w-5" />
                 </div>
                 <div className="space-y-2">
-                  <p className="font-display text-2xl font-semibold text-slate-950">Essa tela encontrou um erro</p>
+                  <p className="font-display text-2xl font-semibold text-slate-50">Essa tela encontrou um erro</p>
                   <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
                     A navegação principal continua protegida. Você pode recarregar esta rota ou voltar para o painel sem derrubar o sistema inteiro.
                   </p>

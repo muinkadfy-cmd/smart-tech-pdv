@@ -5,9 +5,17 @@ interface AppShellState {
   sidebarCollapsed: boolean;
   productViewMode: "table" | "cards";
   operationFocus: OperationFocus;
+  productQuickRegisterOpen: boolean;
+  customerQuickRegisterOpen: boolean;
   toggleSidebar: () => void;
   setProductViewMode: (mode: "table" | "cards") => void;
   setOperationFocus: (mode: OperationFocus) => void;
+  openProductQuickRegister: () => void;
+  closeProductQuickRegister: () => void;
+  setProductQuickRegisterOpen: (open: boolean) => void;
+  openCustomerQuickRegister: () => void;
+  closeCustomerQuickRegister: () => void;
+  setCustomerQuickRegisterOpen: (open: boolean) => void;
 }
 
 const STORAGE_KEY = "smart-tech:operation-focus";
@@ -25,6 +33,8 @@ export const useAppShellStore = create<AppShellState>((set) => ({
   sidebarCollapsed: false,
   productViewMode: "table",
   operationFocus: getStoredFocus(),
+  productQuickRegisterOpen: false,
+  customerQuickRegisterOpen: false,
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setProductViewMode: (mode) => set({ productViewMode: mode }),
   setOperationFocus: (mode) => {
@@ -32,5 +42,11 @@ export const useAppShellStore = create<AppShellState>((set) => ({
       window.localStorage.setItem(STORAGE_KEY, mode);
     }
     set({ operationFocus: mode });
-  }
+  },
+  openProductQuickRegister: () => set({ productQuickRegisterOpen: true }),
+  closeProductQuickRegister: () => set({ productQuickRegisterOpen: false }),
+  setProductQuickRegisterOpen: (open) => set({ productQuickRegisterOpen: open }),
+  openCustomerQuickRegister: () => set({ customerQuickRegisterOpen: true }),
+  closeCustomerQuickRegister: () => set({ customerQuickRegisterOpen: false }),
+  setCustomerQuickRegisterOpen: (open) => set({ customerQuickRegisterOpen: open })
 }));

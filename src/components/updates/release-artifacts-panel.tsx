@@ -4,14 +4,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import type { ReleaseArtifactItem } from "@/features/updates/updates.service";
 
 function getTone(status: ReleaseArtifactItem["status"]) {
-  if (status === "ok") return { icon: CheckCircle2, variant: "success" as const, label: "ok" };
-  if (status === "warning") return { icon: CircleAlert, variant: "outline" as const, label: "ajustar" };
-  return { icon: CircleDashed, variant: "secondary" as const, label: "pendente" };
+  if (status === "ok") return { icon: CheckCircle2, variant: "success" as const, label: "Pronto" };
+  if (status === "warning") return { icon: CircleAlert, variant: "outline" as const, label: "Ajustar" };
+  return { icon: CircleDashed, variant: "secondary" as const, label: "Pendente" };
 }
 
 export function ReleaseArtifactsPanel({ items }: { items: ReleaseArtifactItem[] }) {
   return (
-    <Card className="border-white/80 bg-white/90">
+    <Card className="surface-rule">
       <CardHeader>
         <CardTitle>Artefatos esperados</CardTitle>
       </CardHeader>
@@ -20,9 +20,9 @@ export function ReleaseArtifactsPanel({ items }: { items: ReleaseArtifactItem[] 
           const tone = getTone(item.status);
           const ToneIcon = tone.icon;
           return (
-            <div className="rounded-2xl bg-secondary/45 p-4" key={item.id}>
+            <div className="premium-tile rounded-2xl p-4" key={item.id}>
               <div className="flex items-start justify-between gap-3">
-                <p className="font-semibold text-slate-950">{item.title}</p>
+                <p className="font-semibold text-slate-50">{item.title}</p>
                 <Badge variant={tone.variant}>
                   <ToneIcon className="h-3.5 w-3.5" />
                   {tone.label}

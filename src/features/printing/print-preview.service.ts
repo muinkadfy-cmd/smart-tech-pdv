@@ -76,7 +76,7 @@ function buildReceiptBody(payload: PrintPreviewPayload, detailed: boolean) {
         <p><span>Desconto</span><strong>${formatCurrency(discount)}</strong></p>
         <p class="grand"><span>Total</span><strong>${formatCurrency(total)}</strong></p>
       </div>
-      <p class="footer">Obrigado pela preferencia. Suporte e garantia seguem configuracao da loja.</p>
+      <p class="footer">Obrigado pela preferência. Suporte e garantia seguem configuração da loja.</p>
     </section>
   `;
 }
@@ -128,7 +128,7 @@ function buildA4SummaryBody(payload: PrintPreviewPayload, title: string) {
             <th>Produto</th>
             <th>SKU</th>
             <th>Unidades</th>
-            <th>Preco</th>
+            <th>Preço</th>
           </tr>
         </thead>
         <tbody>${rows}</tbody>
@@ -144,7 +144,7 @@ function buildA4SummaryBody(payload: PrintPreviewPayload, title: string) {
 export function createPrintPreviewHtml(payload: PrintPreviewPayload) {
   const titleByTemplate: Record<string, string> = {
     "tpl-a4": "Resumo operacional",
-    "tpl-order": "Separacao de pedido",
+    "tpl-order": "Separação de pedido",
     "tpl-close": "Fechamento de caixa"
   };
 
@@ -164,7 +164,7 @@ export function createPrintPreviewHtml(payload: PrintPreviewPayload) {
     <html lang="pt-BR">
       <head>
         <meta charset="UTF-8" />
-        <title>Preview de impressao</title>
+        <title>Preview de impressão</title>
         <style>
           :root {
             color-scheme: light;
@@ -264,7 +264,7 @@ export function openPrintPreview(payload: PrintPreviewPayload, autoPrint = false
   const html = createPrintPreviewHtml(payload);
   const popup = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
   if (!popup) {
-    throw new Error("Nao foi possivel abrir a janela de preview. Verifique se o bloqueador esta ativo.");
+    throw new Error("Não foi possível abrir a janela de preview. Verifique se o bloqueador está ativo.");
   }
 
   popup.document.open();

@@ -13,13 +13,43 @@ function run(command, commandArgs, options = {}) {
   const result = spawnSync(command, commandArgs, {
     cwd: root,
     stdio: "inherit",
-    shell: process.platform === "win32",
+    shell: false,
     env: process.env,
     ...options
   });
 
   if (result.status !== 0) {
     process.exit(result.status ?? 1);
+  }
+}
+
+function getGitOutput(args) {
+  const result = spawnSync("git", args, {
+    cwd: root,
+    shell: false,
+    env: process.env,
+    encoding: "utf8"
+  });
+
+  if (result.status !== 0) {
+    return null;
+  }
+
+  return (result.stdout ?? "").trim();
+}
+
+function ensureCleanWorktree() {
+  const status = getGitOutput(["status", "--porcelain", "--untracked-files=normal"]);
+  if (status === null) {
+    throw new Error(
+      "Nao foi possivel validar o estado do git antes do release. Em ambiente restrito isso pode acontecer por bloqueio de execucao do git via Node; nesse caso rode o script no PowerShell local."
+    );
+  }
+
+  if (status.length > 0) {
+    throw new Error(
+      "O release foi bloqueado porque a workspace nao esta limpa. Commit/stage tudo o que precisa entrar no pacote ou limpe as sobras antes de rodar o bump."
+    );
   }
 }
 
@@ -33,18 +63,21 @@ if (!existsSync(path.join(root, ".git"))) {
   throw new Error("Este script precisa ser executado dentro de um repositorio git real com pasta .git.");
 }
 
+ensureCleanWorktree();
 run(process.execPath, ["./scripts/bump-app-version.mjs", ...(setArg ? [setArg] : [])]);
 run(process.execPath, ["./node_modules/typescript/bin/tsc", "--noEmit"]);
 
 const version = readVersion();
 const tagName = `v${version}`;
-const filesToStage = ["package.json", "src/config/app.ts", "src-tauri/Cargo.toml", "src-tauri/tauri.conf.json"];
+run(process.execPath, ["./scripts/generate-release-notes.mjs", `--version=${version}`]);
+
+const filesToStage = ["package.json", "src/config/app.ts", "src-tauri/Cargo.toml", "src-tauri/tauri.conf.json", `release-notes/${tagName}.md`];
 
 run("git", ["add", ...filesToStage]);
 
 const commitResult = spawnSync("git", ["diff", "--cached", "--quiet"], {
   cwd: root,
-  shell: process.platform === "win32",
+  shell: false,
   env: process.env
 });
 

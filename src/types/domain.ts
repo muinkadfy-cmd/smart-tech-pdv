@@ -4,6 +4,17 @@ export type OrderStatus = "novo" | "em separacao" | "pronto" | "entregue" | "can
 export type PaymentMethod = "Dinheiro" | "Pix" | "Cartao" | "Crediario";
 export type ProductSector = "calcados" | "roupas";
 export type OperationFocus = "geral" | ProductSector;
+export type UserRole = "operador" | "admin" | "super_admin";
+export type LocalUserPermissionMode = "role" | "custom";
+export type AppActionKey =
+  | "catalog_manage"
+  | "catalog_view_cost"
+  | "stock_manage"
+  | "stock_inventory"
+  | "pdv_discount"
+  | "print_labels"
+  | "user_switch"
+  | "user_manage";
 
 export interface NavItem {
   label: string;
@@ -11,6 +22,18 @@ export interface NavItem {
   group: string;
   icon: unknown;
   badge?: string;
+  minRole?: UserRole;
+}
+
+export interface LocalUserProfile {
+  id: string;
+  name: string;
+  role: UserRole;
+  pin?: string;
+  status: "active" | "inactive";
+  permissionMode: LocalUserPermissionMode;
+  allowedNavPaths: string[];
+  allowedActions: AppActionKey[];
 }
 
 export interface Category {
@@ -52,6 +75,7 @@ export interface Product {
   tags: string[];
   status: EntityStatus;
   imageHint: string;
+  imageDataUrl?: string;
   variants: ProductVariant[];
   sales30d: number;
 }
@@ -76,6 +100,7 @@ export interface StockMovementDraft {
 
 export interface Customer {
   id: string;
+  status: EntityStatus;
   name: string;
   phone: string;
   whatsapp: string;
@@ -86,14 +111,31 @@ export interface Customer {
   notes: string;
 }
 
+export interface CustomerFormValues {
+  name: string;
+  phone: string;
+  whatsapp: string;
+  email: string;
+  notes: string;
+}
+
 export interface Supplier {
   id: string;
+  status: EntityStatus;
   name: string;
   cnpj: string;
   contact: string;
   email: string;
   leadTimeDays: number;
   linkedProducts: number;
+}
+
+export interface SupplierFormValues {
+  name: string;
+  cnpj: string;
+  contact: string;
+  email: string;
+  leadTimeDays: number;
 }
 
 export interface SaleItem {
@@ -136,11 +178,47 @@ export interface Order {
 export interface Purchase {
   id: string;
   supplierId: string;
+  productId?: string;
   status: "aberta" | "conferida" | "recebida";
   total: number;
   receivedAt?: string;
   createdAt: string;
   items: number;
+  quantity?: number;
+  unitCost?: number;
+  lines?: PurchaseLine[];
+}
+
+export interface PurchaseLine {
+  id: string;
+  productId: string;
+  quantity: number;
+  unitCost: number;
+  size?: string;
+}
+
+export interface PurchaseSizeBreakdownItem {
+  size: string;
+  quantity: number;
+}
+
+export interface PurchaseCreateInput {
+  supplierId: string;
+  productId: string;
+  quantity: number;
+  unitCost: number;
+  status?: Purchase["status"];
+  sizeBreakdown?: PurchaseSizeBreakdownItem[];
+}
+
+export interface PurchaseReceiptInput {
+  purchaseId: string;
+  reason: string;
+  lines: Array<{
+    productId: string;
+    size: string;
+    quantity: number;
+  }>;
 }
 
 export interface FinancialEntry {
@@ -149,6 +227,19 @@ export interface FinancialEntry {
   description: string;
   amount: number;
   status: "aberto" | "pago" | "atrasado";
+  dueAt: string;
+}
+
+export interface FinancialEntryUpdateInput {
+  status?: FinancialEntry["status"];
+  dueAt?: string;
+}
+
+export interface FinancialEntryCreateInput {
+  type: FinancialEntry["type"];
+  description: string;
+  amount: number;
+  status?: FinancialEntry["status"];
   dueAt: string;
 }
 
@@ -220,6 +311,7 @@ export interface ProductFormValues {
   tags: string[];
   status: EntityStatus;
   imageHint: string;
+  imageDataUrl?: string;
   sizes: Array<{ size: string; stock: number }>;
 }
 
@@ -274,7 +366,27 @@ export interface ReportsSnapshot {
 export interface SettingsSnapshot {
   companyName: string;
   document: string;
+  legalName: string;
+  stateRegistration: string;
+  companyPhone: string;
+  companyWhatsapp: string;
+  companyEmail: string;
+  addressLine: string;
+  addressNumber: string;
+  addressDistrict: string;
+  addressCity: string;
+  addressState: string;
+  addressPostalCode: string;
   theme: string;
+  activeLocalUserId: string;
+  localUsers: LocalUserProfile[];
+  currentUserName: string;
+  currentUserRole: UserRole;
+  notifyUpdates: string;
+  notifyLowStock: string;
+  notifyOrders: string;
+  notifyFinance: string;
+  notifySync: string;
   thermalPrinter58: string;
   thermalPrinter80: string;
   defaultSalePrintTemplate: string;
@@ -284,18 +396,85 @@ export interface SettingsSnapshot {
   updaterChannel: string;
 }
 
+export type DiagnosticsRuntimeSeverity = "error" | "warning" | "info";
+export type DiagnosticsRuntimeSource = "console" | "window" | "promise" | "router" | "data" | "manual";
+export type DiagnosticsRuntimeModule =
+  | "Painel"
+  | "Produtos"
+  | "Estoque"
+  | "PDV"
+  | "Pedidos"
+  | "Clientes"
+  | "Fornecedores"
+  | "Compras"
+  | "Relatórios"
+  | "Financeiro"
+  | "Configurações"
+  | "Licença e sincronização"
+  | "Backup"
+  | "Impressão"
+  | "Atualizações"
+  | "Diagnóstico"
+  | "Geral";
+
+export interface DiagnosticsRuntimeEntry {
+  id: string;
+  severity: DiagnosticsRuntimeSeverity;
+  source: DiagnosticsRuntimeSource;
+  module: DiagnosticsRuntimeModule;
+  title: string;
+  message: string;
+  detail?: string;
+  routePath: string;
+  count: number;
+  firstSeenAt: string;
+  lastSeenAt: string;
+  fingerprint: string;
+}
+
+export interface DiagnosticsRuntimeSummary {
+  totalEvents: number;
+  errorCount: number;
+  warningCount: number;
+  infoCount: number;
+  lastRecordedAt: string | null;
+  sources: DiagnosticsRuntimeSource[];
+}
+
+export interface DiagnosticsRuntimeSnapshot {
+  summary: DiagnosticsRuntimeSummary;
+  events: DiagnosticsRuntimeEntry[];
+}
+
 export interface DiagnosticsSnapshot {
   databaseStatus: string;
   updaterStatus: string;
   lastBackupAt: string;
   environment: string;
   logs: string[];
+  runtime: DiagnosticsRuntimeSnapshot;
+}
+
+export type StressTestPreset = "small" | "medium" | "large";
+
+export interface StressTestLoadResult {
+  preset: StressTestPreset;
+  customersCreated: number;
+  productsCreated: number;
+  salesCreated: number;
+  ordersCreated: number;
+  purchasesCreated: number;
+  financialEntriesCreated: number;
+  stockMovementsCreated: number;
+  summary: string;
 }
 
 export interface UpdateCheckState {
-  status: "idle" | "checking" | "available" | "latest" | "error";
+  status: "idle" | "checking" | "available" | "latest" | "installing" | "installed" | "error";
   version?: string;
   message: string;
+  details?: string;
+  checkedAt?: string;
 }
 
 export interface CartItem {

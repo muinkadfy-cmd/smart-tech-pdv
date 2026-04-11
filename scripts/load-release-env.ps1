@@ -33,6 +33,22 @@ Get-Content -LiteralPath $resolvedPath.Path | ForEach-Object {
   $loaded += $name
 }
 
+if (-not $env:TAURI_SIGNING_PRIVATE_KEY -and $env:TAURI_SIGNING_PRIVATE_KEY_PATH) {
+  $resolvedKeyPath = Resolve-Path -LiteralPath $env:TAURI_SIGNING_PRIVATE_KEY_PATH -ErrorAction SilentlyContinue
+  if (-not $resolvedKeyPath) {
+    throw "Arquivo da chave privada nao encontrado em TAURI_SIGNING_PRIVATE_KEY_PATH."
+  }
+
+  if (-not (Test-Path -LiteralPath $resolvedKeyPath.Path)) {
+    throw "A chave privada encontrada em TAURI_SIGNING_PRIVATE_KEY_PATH nao esta acessivel."
+  }
+
+  Set-Item -Path "Env:TAURI_SIGNING_PRIVATE_KEY" -Value $resolvedKeyPath.Path
+  if ($loaded -notcontains "TAURI_SIGNING_PRIVATE_KEY") {
+    $loaded += "TAURI_SIGNING_PRIVATE_KEY"
+  }
+}
+
 if ($loaded.Count -eq 0) {
   Write-Warning "Nenhuma variavel foi carregada de $($resolvedPath.Path)."
   exit 0

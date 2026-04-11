@@ -7,7 +7,7 @@ export function OrderTimelinePanel({ events }: { events: OrderTimelineEvent[] })
     <Card className="border-white/80 bg-white/90">
       <CardHeader>
         <CardTitle>Timeline do pedido</CardTitle>
-        <CardDescription>Vista lateral para nao esmagar informacao no grid.</CardDescription>
+        <CardDescription>Vista lateral para não esmagar informação no grid.</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         {events.map((event, index) => (

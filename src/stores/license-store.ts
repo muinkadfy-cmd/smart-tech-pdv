@@ -8,6 +8,7 @@ export interface LicenseState {
   expiresAt: string | null;
   offlineGraceUntil: string | null;
   installationId: string | null;
+  source: string | null;
   setSnapshot: (partial: Partial<LicenseState>) => void;
 }
 
@@ -17,5 +18,6 @@ export const useLicenseStore = create<LicenseState>((set) => ({
   expiresAt: null,
   offlineGraceUntil: null,
   installationId: null,
+  source: null,
   setSnapshot: (partial) => set(partial)
 }));

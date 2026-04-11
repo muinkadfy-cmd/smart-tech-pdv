@@ -9,9 +9,11 @@ import { PrintTemplateGrid } from "@/components/printing/print-template-grid";
 import { PrinterDevicesPanel } from "@/components/printing/printer-devices-panel";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useOrders, useProducts, useSales, useSettingsSnapshot, useStockSnapshot } from "@/hooks/use-app-data";
-import { buildPrintCenterSnapshot, openPrintPreview } from "@/features/printing/printing.service";
+import { appRepository } from "@/repositories/app-repository";
+import { buildPrintCenterSnapshot, buildProductLabelPrintPreview, openPrintDialog, openPrintPreview } from "@/features/printing/printing.service";
 
 export default function PrintingPage() {
   const settingsState = useSettingsSnapshot();
@@ -20,6 +22,8 @@ export default function PrintingPage() {
   const ordersState = useOrders();
   const stockState = useStockSnapshot();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>("tpl-58");
+  const [selectedProductId, setSelectedProductId] = useState<string>("");
+  const [productQuery, setProductQuery] = useState("");
   const [feedback, setFeedback] = useState<string | null>(null);
 
   const loading = settingsState.loading || productsState.loading || salesState.loading || ordersState.loading || stockState.loading;
@@ -45,73 +49,139 @@ export default function PrintingPage() {
     }
   }, [center, selectedTemplateId]);
 
+  const filteredProducts = useMemo(() => {
+    const normalized = productQuery.trim().toLowerCase();
+    const base = productsState.data ?? [];
+    if (!normalized) {
+      return base;
+    }
+
+    return base.filter((product) => [product.name, product.sku, product.barcode, product.internalCode].join(" ").toLowerCase().includes(normalized));
+  }, [productQuery, productsState.data]);
+
+  useEffect(() => {
+    if (!filteredProducts.length) {
+      return;
+    }
+
+    if (!filteredProducts.some((product) => product.id === selectedProductId)) {
+      setSelectedProductId(filteredProducts[0].id);
+    }
+  }, [filteredProducts, selectedProductId]);
+
   if (loading || !center) {
     return <PageLoader />;
   }
 
   const centerSnapshot = center;
   const selectedTemplate = centerSnapshot.templates.find((template) => template.id === selectedTemplateId) ?? centerSnapshot.templates[0];
-  const preview = centerSnapshot.previews[selectedTemplate.id];
+  const selectedProduct = filteredProducts.find((product) => product.id === selectedProductId) ?? filteredProducts[0] ?? productsState.data?.[0];
+  const preview = selectedTemplate.id === "tpl-label" || selectedTemplate.id === "tpl-stock"
+    ? selectedProduct
+      ? buildProductLabelPrintPreview({
+          settings: {
+            ...settingsState.data!,
+            defaultLabelTemplate: selectedTemplate.id === "tpl-stock" ? "tpl-stock" : "tpl-label"
+          },
+          product: selectedProduct
+        })
+      : centerSnapshot.previews[selectedTemplate.id]
+    : centerSnapshot.previews[selectedTemplate.id];
   const readyCount = centerSnapshot.readiness.filter((item) => item.status === "ok").length;
   const pendingJobs = centerSnapshot.jobs.filter((job) => !job.status.toLowerCase().includes("controle") && !job.status.toLowerCase().includes("sob controle")).length;
 
-  function handlePrint(templateId: string) {
-    const section = centerSnapshot.previews[templateId];
+  function buildSectionForTemplate(templateId: string) {
+    return (templateId === "tpl-label" || templateId === "tpl-stock") && selectedProduct
+      ? buildProductLabelPrintPreview({
+          settings: {
+            ...settingsState.data!,
+            defaultLabelTemplate: templateId === "tpl-stock" ? "tpl-stock" : "tpl-label"
+          },
+          product: selectedProduct
+        })
+      : centerSnapshot.previews[templateId];
+  }
+
+  function handlePrint(templateId: string, mode: "preview" | "dialog" = "dialog") {
+    const section = buildSectionForTemplate(templateId);
     if (!section) {
-      setFeedback("Nao foi possivel montar o preview deste layout.");
+      setFeedback("Não foi possível montar o preview deste layout.");
       return;
     }
 
-    const opened = openPrintPreview(section);
-    setFeedback(opened ? `Preview aberto para ${section.title}.` : "O navegador bloqueou a janela de preview. Permita pop-up para testar impressao.");
+    const opened = mode === "dialog" ? openPrintDialog(section) : openPrintPreview(section);
+    setFeedback(
+      opened
+        ? mode === "dialog"
+          ? `Janela de impressão enviada ao Windows para ${section.title}. Confirme a impressora conectada no diálogo do sistema.`
+          : `Preview aberto para ${section.title}.`
+        : `O sistema bloqueou a janela de ${mode === "dialog" ? "impressão" : "preview"}. Permita pop-up para continuar.`
+    );
   }
 
   async function handleCopyPreview() {
     const content = [preview.title, preview.subtitle, ...preview.lines, ...(preview.totals ?? []).map((row) => `${row.label}: ${row.value}`), preview.footer ?? ""].join("\n");
     try {
       await navigator.clipboard.writeText(content);
-      setFeedback("Conteudo do preview copiado para a area de transferencia.");
+      setFeedback("Conteúdo do preview copiado para a área de transferência.");
     } catch {
-      setFeedback("Nao foi possivel copiar automaticamente. Use o preview para conferir o layout.");
+      setFeedback("Não foi possível copiar automaticamente. Use o preview para conferir o layout.");
     }
+  }
+
+  async function handleSetDefaultPrinter(templateId: "tpl-58" | "tpl-80") {
+    try {
+      await appRepository.updateSettings({ defaultSalePrintTemplate: templateId, salePrintBehavior: "auto" });
+      await settingsState.reload();
+      setFeedback(`Impressora padrão do caixa ajustada para ${templateId === "tpl-80" ? "80 mm" : "58 mm"}. O PDV passa a abrir o diálogo do Windows automaticamente no fechamento.`);
+    } catch (error) {
+      setFeedback(error instanceof Error ? error.message : "Não foi possível atualizar a impressora padrão.");
+    }
+  }
+
+  function resolveTemplateIdFromDevice(deviceType: string) {
+    if (deviceType === "80 mm") return "tpl-80";
+    if (deviceType === "Etiqueta") return "tpl-label";
+    if (deviceType === "A4") return "tpl-stock";
+    return "tpl-58";
   }
 
   return (
     <div className="space-y-6">
       <ModuleHeader
-        badge="Centro de impressao offline-first"
-        description="Mega lote focado em cupom 58/80, etiqueta, separacao e fechamento com preview local, dispositivos padrao e fila operacional mais forte."
-        eyebrow="Impressao"
+        badge="Centro de impressão offline-first"
+        description="Impressão mais direta para testar layout, dispositivo e fila sem alongar a tela."
+        eyebrow="Impressão"
         title="Central de layouts e dispositivos"
       />
 
       {feedback ? (
-        <Card className="border-primary/20 bg-primary/5 shadow-card">
-          <CardContent className="p-4 text-sm text-primary">{feedback}</CardContent>
+        <Card className="surface-rule shadow-card">
+          <CardContent className="p-4 text-sm text-slate-200">{feedback}</CardContent>
         </Card>
       ) : null}
 
-      <div className="grid gap-4 xl:grid-cols-4">
+      <div className="grid gap-4 xl:grid-cols-3 2xl:grid-cols-4">
         {[
-          { label: "Layouts prontos", value: String(center.templates.length), helper: "58 mm, 80 mm, etiqueta e A4", icon: Printer },
-          { label: "Dispositivos", value: String(center.devices.length), helper: "Mapeados com funcao operacional", icon: Sparkles },
-          { label: "Fila / historico", value: String(pendingJobs), helper: "Jobs ativos ou recomendados agora", icon: ClipboardList },
+          { label: "Layouts prontos", value: String(center.templates.length), helper: "Cupom, etiqueta e apoio operacional", icon: Printer },
+          { label: "Dispositivos", value: String(center.devices.length), helper: "Térmicas mapeadas para o fluxo comercial", icon: Sparkles },
+          { label: "Fila / histórico", value: String(pendingJobs), helper: "Jobs ativos ou recomendados agora", icon: ClipboardList },
           {
-            label: "Prontidao",
+            label: "Prontidão",
             value: `${readyCount}/${center.readiness.length}`,
-            helper: settingsState.data?.salePrintBehavior === "auto" ? "Loja configurada para abrir impressao no fechamento" : "Itens conferidos para a loja imprimir",
+            helper: settingsState.data?.salePrintBehavior === "auto" ? "Loja configurada para abrir impressão no fechamento" : "Itens conferidos para a loja imprimir",
             icon: CheckCheck
           }
         ].map((item) => {
           const Icon = item.icon;
           return (
-            <Card className="border-white/80 bg-white/90" key={item.label}>
+            <Card className="executive-panel" key={item.label}>
               <CardContent className="space-y-2 p-5">
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm text-muted-foreground">{item.label}</p>
-                  <Icon className="h-4 w-4 text-slate-500" />
+                  <Icon className="h-4 w-4 text-slate-400" />
                 </div>
-                <p className="font-display text-3xl font-semibold text-slate-950">{item.value}</p>
+                <p className="font-display text-3xl font-semibold text-slate-50">{item.value}</p>
                 <p className="text-sm text-muted-foreground">{item.helper}</p>
               </CardContent>
             </Card>
@@ -119,10 +189,45 @@ export default function PrintingPage() {
         })}
       </div>
 
+      <Card className="surface-rule">
+        <CardContent className="grid gap-3 p-4 xl:grid-cols-[minmax(0,1fr)_320px] xl:items-center">
+          <div className="space-y-1.5">
+            <p className="text-sm font-semibold text-slate-50">Fluxo real da impressão nesta versão</p>
+            <p className="text-sm text-slate-400">
+              O app monta o layout localmente e entrega a impressão ao diálogo do Windows. O nome da impressora salvo indica o alvo preferido do layout, mas ainda não existe envio silencioso nativo direto para USB ou Bluetooth.
+            </p>
+          </div>
+          <div className="rounded-[18px] border border-[rgba(201,168,111,0.12)] bg-[rgba(255,255,255,0.03)] px-4 py-3 text-sm text-slate-300">
+            Se sua máquina já está conectada, use <span className="font-semibold text-slate-50">Imprimir agora</span> ou <span className="font-semibold text-slate-50">Testar impressão</span> e confirme o dispositivo no diálogo do Windows.
+          </div>
+        </CardContent>
+      </Card>
+
+      {(selectedTemplate.id === "tpl-label" || selectedTemplate.id === "tpl-stock") ? (
+        <Card className="surface-rule">
+          <CardContent className="grid gap-4 p-5 xl:grid-cols-[1fr_260px]">
+            <div className="space-y-3">
+              <p className="text-sm font-semibold text-slate-50">Selecionar produto para etiqueta</p>
+              <Input onChange={(event) => setProductQuery(event.target.value)} placeholder="Buscar por nome, SKU, código interno ou código de barras" value={productQuery} />
+            </div>
+            <div className="space-y-2">
+              <p className="text-sm text-slate-400">Produto em foco</p>
+              <select className="native-select h-11 w-full text-sm" onChange={(event) => setSelectedProductId(event.target.value)} value={selectedProduct?.id ?? ""}>
+                {filteredProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name} • {product.sku}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <div className="grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <PrintPreviewPanel onCopy={() => void handleCopyPreview()} onPrint={() => handlePrint(selectedTemplate.id)} preview={preview} />
+        <PrintPreviewPanel onCopy={() => void handleCopyPreview()} onOpenPreview={() => handlePrint(selectedTemplate.id, "preview")} onPrint={() => handlePrint(selectedTemplate.id, "dialog")} preview={preview} />
         <div className="space-y-6">
-          <PrinterDevicesPanel items={centerSnapshot.devices} />
+          <PrinterDevicesPanel items={centerSnapshot.devices} onPrint={(item) => handlePrint(resolveTemplateIdFromDevice(item.type), "dialog")} onSetDefault={(item) => void handleSetDefaultPrinter(item.type === "80 mm" ? "tpl-80" : "tpl-58")} />
           <PrintReadinessPanel items={centerSnapshot.readiness} />
         </div>
       </div>
@@ -130,38 +235,23 @@ export default function PrintingPage() {
       <Tabs defaultValue="templates">
         <TabsList>
           <TabsTrigger value="templates">Templates</TabsTrigger>
-          <TabsTrigger value="fila">Fila de impressao</TabsTrigger>
-          <TabsTrigger value="prontidao">Prontidao</TabsTrigger>
+          <TabsTrigger value="fila">Fila de impressão</TabsTrigger>
+          <TabsTrigger value="prontidao">Prontidão</TabsTrigger>
         </TabsList>
 
         <TabsContent value="templates">
-          <PrintTemplateGrid activeId={selectedTemplate.id} items={centerSnapshot.templates} onPrint={handlePrint} onSelect={setSelectedTemplateId} />
+          <PrintTemplateGrid activeId={selectedTemplate.id} items={centerSnapshot.templates} onPrint={(templateId) => handlePrint(templateId, "dialog")} onSelect={setSelectedTemplateId} />
         </TabsContent>
 
         <TabsContent value="fila">
           <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
             <PrintJobTimeline items={centerSnapshot.jobs} />
-            <Card className="border-white/80 bg-white/90">
-              <CardContent className="space-y-4 p-6">
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-display text-xl font-semibold text-slate-950">Rotina recomendada</p>
-                    <p className="mt-1 text-sm text-muted-foreground">Fluxo para a loja imprimir sem travar operacao nem perder padrao visual.</p>
-                  </div>
-                  <Badge variant="outline">offline first</Badge>
-                </div>
-                <div className="grid gap-3 md:grid-cols-2">
-                  {[
-                    "No PDV, use 58 mm para comprovante rapido e 80 mm quando precisar de detalhamento.",
-                    "Use etiquetas no recebimento para organizar grade, cor e preco antes de expor na loja.",
-                    "Imprima a separacao em A4 quando houver pedido ou conferencia por setor.",
-                    "No fechamento do dia, gere o resumo de caixa e a reposicao para compras."
-                  ].map((text) => (
-                    <div className="rounded-2xl bg-secondary/45 p-4 text-sm leading-6 text-muted-foreground" key={text}>
-                      {text}
-                    </div>
-                  ))}
-                </div>
+            <Card className="executive-panel">
+              <CardContent className="grid gap-4 p-4 md:grid-cols-2">
+                <div className="premium-tile rounded-[18px] p-4 text-sm leading-6 text-slate-400">No PDV, use 58 mm para comprovante rápido e 80 mm quando precisar de detalhamento.</div>
+                <div className="premium-tile rounded-[18px] p-4 text-sm leading-6 text-slate-400">Defina 58 mm ou 80 mm como padrão do fluxo e evite troca manual no balcão.</div>
+                <div className="premium-tile rounded-[18px] p-4 text-sm leading-6 text-slate-400">Fluxo direto do caixa prioriza térmica e reduz ruído visual para a equipe.</div>
+                <div className="premium-tile rounded-[18px] p-4 text-sm leading-6 text-slate-400">Quando precisar revisar, use preview; quando a loja estiver pronta, deixe o fluxo direto configurado.</div>
               </CardContent>
             </Card>
           </div>
@@ -170,25 +260,21 @@ export default function PrintingPage() {
         <TabsContent value="prontidao">
           <div className="grid gap-6 xl:grid-cols-[0.8fr_1.2fr]">
             <PrintReadinessPanel items={centerSnapshot.readiness} />
-            <Card className="border-white/80 bg-white/90">
+            <Card className="executive-panel">
               <CardContent className="space-y-4 p-6">
-                <p className="font-display text-xl font-semibold text-slate-950">Padrao comercial recomendado</p>
+                <p className="font-display text-xl font-semibold text-slate-50">Padrão comercial recomendado</p>
                 <div className="grid gap-3 md:grid-cols-2">
-                  <div className="rounded-2xl bg-secondary/45 p-4">
-                    <p className="font-semibold text-slate-950">58 mm</p>
-                    <p className="mt-2 text-sm text-muted-foreground">Cupom rapido no caixa, menor consumo e velocidade para operador de balcão.</p>
+                  <div className="premium-tile rounded-2xl p-4">
+                    <p className="font-semibold text-slate-50">58 mm</p>
+                    <p className="mt-2 text-sm text-muted-foreground">Cupom rápido no caixa, menor consumo e velocidade para operador de balcão.</p>
                   </div>
-                  <div className="rounded-2xl bg-secondary/45 p-4">
-                    <p className="font-semibold text-slate-950">80 mm</p>
-                    <p className="mt-2 text-sm text-muted-foreground">Cupom detalhado, mais leitura para cliente e para conferencias especiais.</p>
+                  <div className="premium-tile rounded-2xl p-4">
+                    <p className="font-semibold text-slate-50">80 mm</p>
+                    <p className="mt-2 text-sm text-muted-foreground">Cupom detalhado, mais leitura para cliente e para conferências especiais.</p>
                   </div>
-                  <div className="rounded-2xl bg-secondary/45 p-4">
-                    <p className="font-semibold text-slate-950">Etiqueta</p>
-                    <p className="mt-2 text-sm text-muted-foreground">SKU, preco, grade e setor. Ajuda muito em roupas, calcados e reposicao.</p>
-                  </div>
-                  <div className="rounded-2xl bg-secondary/45 p-4">
-                    <p className="font-semibold text-slate-950">A4</p>
-                    <p className="mt-2 text-sm text-muted-foreground">Separacao, fechamento de caixa, relatorios internos e conferencias de estoque.</p>
+                  <div className="premium-tile rounded-2xl p-4 md:col-span-2">
+                    <p className="font-semibold text-slate-50">Padrão recomendado</p>
+                    <p className="mt-2 text-sm text-muted-foreground">Use 58 mm como padrão em balcão rápido e 80 mm quando a loja precisar de cupom mais detalhado. O restante fica fora do fluxo principal de venda.</p>
                   </div>
                 </div>
               </CardContent>

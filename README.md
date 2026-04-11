@@ -9,8 +9,11 @@ Sistema desktop Tauri v2 para loja de calcados com shell premium, arquitetura mo
 - `npm run type-check`: validacao TypeScript
 - `npm run tauri:dev`: executa o app desktop em desenvolvimento
 - `npm run tauri:build`: gera o build desktop assinado
+- `npm run tauri:build:signed:ps`: carrega `.env.release` e builda no Windows com updater pronto
+- `npm run tauri:signer:generate`: gera o par de chaves do updater em `C:\PDV-SMART-TECH\keys`
 - `npm run version:bump -- --set=2.0.1`: atualiza versao em package/app/Cargo/Tauri
 - `npm run release:ready`: valida se o pipeline automatico esta pronto para release
+- `npm run release:notes`: gera automaticamente as notas da proxima release
 - `npm run release:check`: valida os artefatos da pasta `release`
 - `npm run release:desktop`: prepara MSI, `.sig` e `latest.json`
 - `npm run release:github -- --set=2.0.1`: faz bump, commit, tag e push para disparar o GitHub Release

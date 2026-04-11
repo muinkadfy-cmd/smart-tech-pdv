@@ -13,6 +13,7 @@
 - `TAURI_UPDATER_ENDPOINT`
 - `TAURI_UPDATER_PUBKEY`
 - `TAURI_SIGNING_PRIVATE_KEY`
+- `TAURI_SIGNING_PRIVATE_KEY_PATH`
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 
 ## latest.json
@@ -32,10 +33,12 @@ O manifest gerado segue a estrutura de plataforma `windows-x86_64` e aponta para
 Antes de subir uma tag para o GitHub, rode:
 
 1. `npm run release:ready`
-2. `npm run release:github -- --set=2.0.1`
+2. `npm run release:notes -- --version=2.0.1` para revisar o texto da atualizacao
+3. `npm run release:github -- --set=2.0.1`
 
 O primeiro comando valida:
 - pasta `.git`
+- worktree limpa antes do bump/tag/push
 - remote `origin`
 - versoes sincronizadas
 - workflow do GitHub
@@ -46,6 +49,5 @@ O primeiro comando valida:
 ## Fluxo PowerShell recomendado no Windows
 
 1. Copiar `.env.release.example` para `.env.release`
-2. Rodar `npm run release:github:ps -- -Version 2.0.1`
-3. Se quiser apenas carregar as variaveis na sessao:
-   - `npm run release:env`
+2. Rodar `npm run tauri:build:signed:ps` para validar o build assinado local
+3. Rodar `npm run release:github:ps -- -Version 2.0.1`

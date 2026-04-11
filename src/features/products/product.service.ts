@@ -57,7 +57,8 @@ export function createDefaultProductFormValues(sector: ProductSector = "calcados
     promotionalPrice: undefined,
     tags: sector === "calcados" ? ["Novo"] : ["Moda"],
     status: "active",
-    imageHint: sector === "calcados" ? "calcado premium" : "look feminino premium",
+    imageHint: sector === "calcados" ? "calçado premium" : "look feminino premium",
+    imageDataUrl: undefined,
     sizes: getSectorSizes(sector).map((size) => ({ size, stock: 0 }))
   };
 }

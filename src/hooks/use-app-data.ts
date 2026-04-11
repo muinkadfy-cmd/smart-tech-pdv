@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type DependencyList } from "react";
 import { appRepository } from "@/repositories/app-repository";
+import { recordRuntimeDiagnostic } from "@/services/diagnostics/runtime-diagnostics.service";
 
 interface AsyncState<T> {
   data: T | null;
@@ -54,6 +55,13 @@ export function useAppData<T>(cacheKey: string, loader: () => Promise<T>, deps: 
         if (!active) {
           return;
         }
+        recordRuntimeDiagnostic({
+          severity: "error",
+          source: "data",
+          title: "Falha ao carregar dados do módulo",
+          message: error.message,
+          detail: `Loader: ${cacheKey}`
+        });
         setState((current) => ({
           data: current.data ?? cachedData,
           loading: false,

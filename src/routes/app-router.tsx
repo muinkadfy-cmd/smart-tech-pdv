@@ -1,5 +1,8 @@
 import { Suspense, lazy } from "react";
 import { BrowserRouter, Navigate, useLocation, useRoutes } from "react-router-dom";
+import { AuthProtectedRoute } from "@/auth/auth-protected-route";
+import { PublicAuthRoute } from "@/auth/public-auth-route";
+import { RoleProtectedRoute } from "@/auth/role-protected-route";
 import { PageLoader } from "@/components/shared/page-loader";
 import { RouteErrorBoundary } from "@/components/shared/route-error-boundary";
 import { AppShell } from "@/layouts/app-shell";
@@ -19,6 +22,7 @@ const SettingsPage = lazy(routeImporters["/configuracoes"]);
 const PrintingPage = lazy(routeImporters["/impressao"]);
 const UpdatesPage = lazy(routeImporters["/atualizacoes"]);
 const DiagnosticsPage = lazy(routeImporters["/diagnostico"]);
+const LoginPage = lazy(routeImporters["/login"]);
 const ActivationPage = lazy(routeImporters["/ativacao"]);
 const LicenseSyncPage = lazy(routeImporters["/licenca-sincronizacao"]);
 const BackupPage = lazy(routeImporters["/backup"]);
@@ -26,10 +30,11 @@ const NotFoundPage = lazy(routeImporters["*"]);
 
 function AppRoutes() {
   return useRoutes([
+    { path: "/login", element: <PublicAuthRoute><LoginPage /></PublicAuthRoute> },
     { path: "/ativacao", element: <ActivationPage /> },
     {
       path: "/",
-      element: <AppShell />,
+      element: <AuthProtectedRoute><AppShell /></AuthProtectedRoute>,
       children: [
         { index: true, element: <Navigate replace to="/dashboard" /> },
         { path: "/dashboard", element: <DashboardPage /> },
@@ -38,16 +43,16 @@ function AppRoutes() {
         { path: "/pdv", element: <PdvPage /> },
         { path: "/pedidos", element: <OrdersPage /> },
         { path: "/clientes", element: <CustomersPage /> },
-        { path: "/fornecedores", element: <SuppliersPage /> },
-        { path: "/compras", element: <PurchasesPage /> },
-        { path: "/relatorios", element: <ReportsPage /> },
-        { path: "/financeiro", element: <FinancePage /> },
-        { path: "/configuracoes", element: <SettingsPage /> },
-        { path: "/licenca-sincronizacao", element: <LicenseSyncPage /> },
-        { path: "/backup", element: <BackupPage /> },
-        { path: "/impressao", element: <PrintingPage /> },
-        { path: "/atualizacoes", element: <UpdatesPage /> },
-        { path: "/diagnostico", element: <DiagnosticsPage /> }
+        { path: "/fornecedores", element: <RoleProtectedRoute minRole="admin"><SuppliersPage /></RoleProtectedRoute> },
+        { path: "/compras", element: <RoleProtectedRoute minRole="admin"><PurchasesPage /></RoleProtectedRoute> },
+        { path: "/relatorios", element: <RoleProtectedRoute minRole="admin"><ReportsPage /></RoleProtectedRoute> },
+        { path: "/financeiro", element: <RoleProtectedRoute minRole="admin"><FinancePage /></RoleProtectedRoute> },
+        { path: "/configuracoes", element: <RoleProtectedRoute minRole="admin"><SettingsPage /></RoleProtectedRoute> },
+        { path: "/licenca-sincronizacao", element: <RoleProtectedRoute minRole="super_admin"><LicenseSyncPage /></RoleProtectedRoute> },
+        { path: "/backup", element: <RoleProtectedRoute minRole="super_admin"><BackupPage /></RoleProtectedRoute> },
+        { path: "/impressao", element: <RoleProtectedRoute minRole="admin"><PrintingPage /></RoleProtectedRoute> },
+        { path: "/atualizacoes", element: <RoleProtectedRoute minRole="super_admin"><UpdatesPage /></RoleProtectedRoute> },
+        { path: "/diagnostico", element: <RoleProtectedRoute minRole="super_admin"><DiagnosticsPage /></RoleProtectedRoute> }
       ]
     },
     {

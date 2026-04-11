@@ -3995,7 +3995,7 @@ dependencies = [
 
 [[package]]
 name = "smart-tech-pdv"
-version = "2.0.0"
+version = "2.2.14"
 dependencies = [
  "serde",
  "serde_json",
