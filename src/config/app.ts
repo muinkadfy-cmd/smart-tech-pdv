@@ -1,5 +1,5 @@
 export const APP_NAME = "Smart Tech PDV";
-export const APP_VERSION = "2.2.14";
+export const APP_VERSION = "2.2.15";
 export const APP_ENV = import.meta.env.APP_ENV ?? import.meta.env.MODE;
 export const APP_UPDATER_ENDPOINT =
   import.meta.env.TAURI_UPDATER_ENDPOINT ??
@@ -67,6 +67,7 @@ export function getSupabaseProjectLabel() {
 export function getUpdaterChannelLabel(channel = "stable") {
   return channel === "beta" ? "Canal beta" : "Canal estável";
 }
+
 
 
 
