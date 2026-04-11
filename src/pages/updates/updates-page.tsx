@@ -27,8 +27,8 @@ const initialState: UpdateCheckState = {
 
 function getStateLabel(state: UpdateCheckState["status"]) {
   if (state === "latest") return "Tudo em dia";
-  if (state === "available") return "Nova versão encontrada";
-  if (state === "installed") return "Pronta para concluir";
+  if (state === "available") return "Atualização obrigatória encontrada";
+  if (state === "installed") return "Obrigatória pronta para concluir";
   if (state === "installing") return "Instalando";
   if (state === "checking") return "Verificando";
   if (state === "error") return "Precisa de atenção";
@@ -71,7 +71,7 @@ function getStateTitle(state: UpdateCheckState) {
 }
 
 function getPrimaryActionLabel(state: UpdateCheckState) {
-  if (state.status === "available") return "Baixar e instalar";
+  if (state.status === "available") return "Instalar agora";
   if (state.status === "installed") return "Fechar para concluir";
   if (state.status === "error") return "Revisar publicação";
   return "Verificar agora";
@@ -213,7 +213,7 @@ export default function UpdatesPage() {
           </>
         }
         badge="Atualização clara para o usuário"
-        description="Deixei esta área mais simples: ela mostra se já está tudo certo, quando existe versão nova e qual é o próximo passo para o usuário." 
+        description="Deixei esta área mais simples: ela mostra se já está tudo certo, quando existe versão nova e qual é o próximo passo obrigatório para o usuário." 
         eyebrow="Atualizações"
         title="Atualização do sistema"
       />
@@ -271,7 +271,7 @@ export default function UpdatesPage() {
                       label: "Próximo passo",
                       value:
                         state.status === "available"
-                          ? "Baixar e instalar"
+                          ? "Instalar agora"
                           : state.status === "installed"
                             ? "Fechar e abrir o app"
                             : state.status === "error"

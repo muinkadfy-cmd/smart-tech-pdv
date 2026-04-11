@@ -14,6 +14,8 @@ interface UpdaterStoreState {
   bannerVisible: boolean;
   snoozedNotice: UpdaterNoticeSnooze | null;
   installBusy: boolean;
+  forcedUpdateVersion: string | null;
+  forceUpdateRequired: boolean;
   setState: (state: UpdateCheckState, options?: { autoChecked?: boolean }) => void;
   checkNow: (mode?: "startup" | "manual") => Promise<UpdateCheckState>;
   installNow: () => Promise<UpdateCheckState>;
@@ -31,8 +33,12 @@ const initialState: UpdateCheckState = {
   message: "Pronto para consultar o latest.json do canal configurado."
 };
 
+function isMandatoryUpdateStatus(status: UpdateCheckState["status"]) {
+  return status === "available" || status === "installing" || status === "installed";
+}
+
 function isRelevantBannerStatus(status: UpdateCheckState["status"]) {
-  return status === "available" || status === "installed" || status === "error";
+  return isMandatoryUpdateStatus(status) || status === "error";
 }
 
 function getStoredSnooze(): UpdaterNoticeSnooze | null {
@@ -127,7 +133,7 @@ function clearSnoozeIfVersionChanged(state: UpdateCheckState, snooze: UpdaterNot
 
 function buildSnooze(state: UpdateCheckState): UpdaterNoticeSnooze | null {
   const durationMs =
-    state.status === "available" ? AVAILABLE_SNOOZE_MS : state.status === "installed" ? INSTALLED_SNOOZE_MS : state.status === "error" ? ERROR_SNOOZE_MS : 0;
+    state.status === "error" ? ERROR_SNOOZE_MS : 0;
 
   if (durationMs <= 0) {
     return null;
@@ -140,21 +146,51 @@ function buildSnooze(state: UpdateCheckState): UpdaterNoticeSnooze | null {
   };
 }
 
+function resolveForcedUpdateVersion(state: UpdateCheckState, currentForcedVersion: string | null) {
+  if (state.status === "available") {
+    return state.version ?? currentForcedVersion;
+  }
+
+  if (state.status === "installing" || state.status === "installed" || state.status === "error") {
+    return state.version ?? currentForcedVersion;
+  }
+
+  if (state.status === "idle" || state.status === "latest") {
+    return null;
+  }
+
+  return currentForcedVersion;
+}
+
+function isForceUpdateRequired(state: UpdateCheckState, forcedUpdateVersion: string | null) {
+  if (!forcedUpdateVersion) {
+    return false;
+  }
+
+  return state.status !== "idle" && state.status !== "latest";
+}
+
 export const useUpdaterStore = create<UpdaterStoreState>((set, get) => ({
   state: initialState,
   autoChecked: false,
   bannerVisible: false,
   snoozedNotice: getStoredSnooze(),
   installBusy: false,
+  forcedUpdateVersion: null,
+  forceUpdateRequired: false,
   setState: (state, options) =>
     set((current) => {
+      const nextForcedUpdateVersion = resolveForcedUpdateVersion(state, current.forcedUpdateVersion);
+      const mandatoryUpdateActive = isForceUpdateRequired(state, nextForcedUpdateVersion);
       const nextSnooze = clearSnoozeIfVersionChanged(state, current.snoozedNotice);
       return {
         state,
         autoChecked: options?.autoChecked ?? current.autoChecked,
         installBusy: current.installBusy,
-        bannerVisible: isRelevantBannerStatus(state.status) && !isSnoozedForState(state, nextSnooze),
-        snoozedNotice: nextSnooze
+        forcedUpdateVersion: nextForcedUpdateVersion,
+        forceUpdateRequired: mandatoryUpdateActive,
+        bannerVisible: mandatoryUpdateActive || (isRelevantBannerStatus(state.status) && !isSnoozedForState(state, nextSnooze)),
+        snoozedNotice: mandatoryUpdateActive ? null : nextSnooze
       };
     }),
   checkNow: async (mode = "manual") => {
@@ -177,14 +213,18 @@ export const useUpdaterStore = create<UpdaterStoreState>((set, get) => ({
     const result = await checkForUpdates();
 
     set((state) => {
+      const nextForcedUpdateVersion = resolveForcedUpdateVersion(result, state.forcedUpdateVersion);
+      const mandatoryUpdateActive = isForceUpdateRequired(result, nextForcedUpdateVersion);
       const nextSnooze = clearSnoozeIfVersionChanged(result, state.snoozedNotice);
       const manualBanner = result.status !== "idle" && result.status !== "checking";
       return {
         state: result,
         autoChecked: true,
         installBusy: false,
-        bannerVisible: mode === "manual" ? manualBanner : isRelevantBannerStatus(result.status) && !isSnoozedForState(result, nextSnooze),
-        snoozedNotice: nextSnooze
+        forcedUpdateVersion: nextForcedUpdateVersion,
+        forceUpdateRequired: mandatoryUpdateActive,
+        bannerVisible: mandatoryUpdateActive || (mode === "manual" ? manualBanner : isRelevantBannerStatus(result.status) && !isSnoozedForState(result, nextSnooze)),
+        snoozedNotice: mandatoryUpdateActive ? null : nextSnooze
       };
     });
 
@@ -196,41 +236,64 @@ export const useUpdaterStore = create<UpdaterStoreState>((set, get) => ({
       return current.state;
     }
 
-    const targetVersion = current.state.version;
+    const targetVersion = current.state.version ?? current.forcedUpdateVersion ?? undefined;
     set((state) => ({
       ...state,
       installBusy: true,
+      forcedUpdateVersion: targetVersion ?? state.forcedUpdateVersion,
+      forceUpdateRequired: true,
+      bannerVisible: true,
       state: {
         status: "installing",
         version: targetVersion,
-        message: targetVersion ? `Baixando e preparando a versão ${targetVersion}...` : "Baixando e preparando a atualização...",
-        details: "O pacote está sendo validado antes da instalação para manter o update seguro.",
+        message: targetVersion ? `Baixando e preparando a versão obrigatória ${targetVersion}...` : "Baixando e preparando a atualização obrigatória...",
+        details: "O uso do sistema fica bloqueado até essa instalação terminar com segurança.",
         checkedAt: new Date().toISOString()
       }
     }));
 
     const result = await installAvailableUpdate();
+    const nextState =
+      result.status === "error" && targetVersion
+        ? {
+            ...result,
+            version: targetVersion,
+            message: `Falha ao instalar a atualização obrigatória ${targetVersion}.`,
+            details: result.details
+              ? `${result.details} O sistema permanece bloqueado até a instalação ser concluída.`
+              : "O sistema permanece bloqueado até a instalação obrigatória ser concluída."
+          }
+        : result;
 
     set((state) => ({
       ...state,
-      state: result,
+      state: nextState,
       installBusy: false,
-      bannerVisible: result.status === "installed",
-      snoozedNotice: result.status === "installed" ? null : state.snoozedNotice
+      forcedUpdateVersion: resolveForcedUpdateVersion(nextState, state.forcedUpdateVersion),
+      forceUpdateRequired: isForceUpdateRequired(nextState, resolveForcedUpdateVersion(nextState, state.forcedUpdateVersion)),
+      bannerVisible: isForceUpdateRequired(nextState, resolveForcedUpdateVersion(nextState, state.forcedUpdateVersion)),
+      snoozedNotice: null
     }));
-    if (result.status === "installed") {
+    if (nextState.status === "installed") {
       persistSnooze(null);
     }
 
-    return result;
+    return nextState;
   },
   showBanner: () =>
     set((current) => ({
       ...current,
-      bannerVisible: current.state.status !== "idle" && current.state.status !== "checking"
+      bannerVisible: current.forceUpdateRequired || (current.state.status !== "idle" && current.state.status !== "checking")
     })),
   dismissBanner: () =>
     set((current) => {
+      if (current.forceUpdateRequired) {
+        return {
+          ...current,
+          bannerVisible: true
+        };
+      }
+
       const snooze = buildSnooze(current.state);
       persistSnooze(snooze);
       return {

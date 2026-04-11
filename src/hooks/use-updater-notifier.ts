@@ -23,8 +23,10 @@ export function useUpdaterNotifier() {
   const autoChecked = useUpdaterStore((state) => state.autoChecked);
   const checkedAt = useUpdaterStore((state) => state.state.checkedAt);
   const status = useUpdaterStore((state) => state.state.status);
+  const forcedUpdateVersion = useUpdaterStore((state) => state.forcedUpdateVersion);
   const installBusy = useUpdaterStore((state) => state.installBusy);
   const checkNow = useUpdaterStore((state) => state.checkNow);
+  const installNow = useUpdaterStore((state) => state.installNow);
 
   useEffect(() => {
     if (!isTauriRuntime() || installBusy) {
@@ -104,4 +106,26 @@ export function useUpdaterNotifier() {
       window.clearInterval(timer);
     };
   }, [checkNow, installBusy, status]);
+
+  useEffect(() => {
+    if (!isTauriRuntime()) {
+      return;
+    }
+
+    if (status !== "available" || !forcedUpdateVersion || installBusy) {
+      return;
+    }
+
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      void installNow();
+    }, 900);
+
+    return () => {
+      window.clearTimeout(timer);
+    };
+  }, [forcedUpdateVersion, installBusy, installNow, status]);
 }

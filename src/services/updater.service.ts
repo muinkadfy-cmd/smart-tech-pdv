@@ -68,8 +68,8 @@ export async function checkForUpdates(): Promise<UpdateCheckState> {
       return {
         status: "available",
         version: update.version,
-        message: `Nova versão ${update.version} encontrada no ${channelLabel.toLowerCase()}.`,
-        details: "O usuário já pode abrir Atualizações para baixar e instalar o novo lote com segurança.",
+        message: `Nova versão obrigatória ${update.version} encontrada no ${channelLabel.toLowerCase()}.`,
+        details: "Esta instalação entra em modo obrigatório e precisa concluir o update antes de continuar o uso.",
         checkedAt: new Date().toISOString()
       };
     }
@@ -120,8 +120,8 @@ export async function installAvailableUpdate() {
     return {
       status: "installed",
       version: update.version,
-      message: `Atualização ${update.version} pronta para concluir a instalação.`,
-      details: "Feche e reabra o app caso o runtime não reinicie automaticamente após o updater finalizar.",
+      message: `Atualização obrigatória ${update.version} pronta para concluir a instalação.`,
+      details: "Feche e reabra o app para concluir. O sistema permanece bloqueado até finalizar esse passo.",
       checkedAt: new Date().toISOString()
     } satisfies UpdateCheckState;
   } catch (error) {

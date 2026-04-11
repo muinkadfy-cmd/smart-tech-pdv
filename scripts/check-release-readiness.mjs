@@ -3,6 +3,8 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 
 const root = process.cwd();
+const targetVersionArg = process.argv.find((arg) => arg.startsWith("--target-version="));
+const targetVersion = targetVersionArg ? targetVersionArg.split("=")[1] : null;
 
 function readJson(relativePath) {
   return JSON.parse(readFileSync(path.join(root, relativePath), "utf8"));
@@ -49,7 +51,8 @@ const workflowPath = ".github/workflows/release-desktop.yml";
 const appVersion = extractVersion(/APP_VERSION\s*=\s*"([^"]+)"/, appConfig, "APP_VERSION");
 const cargoVersion = extractVersion(/version\s*=\s*"([^"]+)"/, cargoToml, "version do Cargo.toml");
 const updaterEndpoint = extractVersion(/APP_UPDATER_ENDPOINT[\s\S]*?"(https:\/\/[^"]+)"/, appConfig, "APP_UPDATER_ENDPOINT");
-const currentTagName = `v${packageJson.version}`;
+const releaseVersion = targetVersion || packageJson.version;
+const currentTagName = `v${releaseVersion}`;
 const headCommit = getGitOutput(["rev-parse", "HEAD"]);
 const currentTagCommit = getGitTagCommit(currentTagName);
 const gitStatus = getGitOutput(["status", "--porcelain", "--untracked-files=normal"]);
@@ -77,6 +80,11 @@ pushCheck(Boolean(gitRemote), "Remote origin", gitRemote || "Configure o remote 
 pushCheck(packageJson.version === appVersion, "Versao package/app.ts", `${packageJson.version} / ${appVersion}`);
 pushCheck(packageJson.version === tauriConfig.version, "Versao package/tauri", `${packageJson.version} / ${tauriConfig.version}`);
 pushCheck(packageJson.version === cargoVersion, "Versao package/cargo", `${packageJson.version} / ${cargoVersion}`);
+pushCheck(
+  !targetVersion || targetVersion.trim().length > 0,
+  "Versao alvo do release",
+  targetVersion ? `Proxima versao solicitada: ${targetVersion}.` : `Sem versao alvo informada; usando a versao atual ${packageJson.version}.`
+);
 pushCheck(
   !(currentTagCommit && headCommit && currentTagCommit !== headCommit),
   "Versao liberada sem bump novo",

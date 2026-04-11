@@ -90,6 +90,8 @@ export function AppShell() {
   const syncError = useSyncStore((state) => state.lastError);
   const updateState = useUpdaterStore((state) => state.state);
   const updateBannerVisible = useUpdaterStore((state) => state.bannerVisible);
+  const forceUpdateRequired = useUpdaterStore((state) => state.forceUpdateRequired);
+  const forcedUpdateVersion = useUpdaterStore((state) => state.forcedUpdateVersion);
   const dismissUpdateBanner = useUpdaterStore((state) => state.dismissBanner);
   const showUpdateBanner = useUpdaterStore((state) => state.showBanner);
   const checkUpdatesNow = useUpdaterStore((state) => state.checkNow);
@@ -312,12 +314,18 @@ export function AppShell() {
 
   const updateBannerTitle =
     updateState.status === "installed"
-      ? "Atualização pronta para concluir a instalação"
+      ? forceUpdateRequired
+        ? "Atualização obrigatória pronta para concluir"
+        : "Atualização pronta para concluir a instalação"
       : updateState.status === "latest"
         ? "Esta instalação já está atualizada"
         : updateState.status === "error"
-          ? "Não foi possível validar a nova atualização"
-          : "Nova atualização pronta para esta instalação";
+          ? forceUpdateRequired
+            ? "A instalação obrigatória falhou"
+            : "Não foi possível validar a nova atualização"
+          : forceUpdateRequired
+            ? "Atualização obrigatória encontrada"
+            : "Nova atualização pronta para esta instalação";
   const compactViewport = viewportDensity !== "regular";
   const condensedViewport = viewportDensity === "condensed";
 
@@ -713,9 +721,11 @@ export function AppShell() {
                     <Link className={buttonVariants({ size: "sm", variant: "outline" })} to="/atualizacoes">
                       Ver detalhes
                     </Link>
-                    <Button onClick={dismissUpdateBanner} size="sm" variant="outline">
-                      {updateState.status === "installed" || updateState.status === "available" ? "Lembrar depois" : updateState.status === "latest" ? "Fechar" : "Agora não"}
-                    </Button>
+                    {!forceUpdateRequired ? (
+                      <Button onClick={dismissUpdateBanner} size="sm" variant="outline">
+                        {updateState.status === "installed" || updateState.status === "available" ? "Lembrar depois" : updateState.status === "latest" ? "Fechar" : "Agora não"}
+                      </Button>
+                    ) : null}
                   </div>
                 </div>
               </div>
@@ -733,6 +743,116 @@ export function AppShell() {
       <ProductQuickRegisterOverlay />
       <CustomerQuickRegisterOverlay />
       <OperationAlertCenter />
+      {forceUpdateRequired ? (
+        <>
+          <div className="fixed inset-x-0 top-0 z-[150] flex justify-center px-4 pt-4">
+            <div className="system-alert system-alert--warning flex w-full max-w-[980px] flex-col gap-3 rounded-[24px] border border-[rgba(201,168,111,0.24)] px-4 py-3 shadow-[0_28px_60px_-32px_rgba(0,0,0,0.72)] lg:flex-row lg:items-center lg:justify-between">
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className="text-sm font-semibold">
+                    {updateState.status === "installed"
+                      ? "Atualização obrigatória pronta para concluir"
+                      : updateState.status === "installing"
+                        ? "Instalando atualização obrigatória"
+                        : updateState.status === "error"
+                          ? "Falha na instalação obrigatória"
+                          : "Atualização obrigatória detectada"}
+                  </p>
+                  {forcedUpdateVersion ? <Badge variant="outline">v{forcedUpdateVersion}</Badge> : null}
+                </div>
+                <p className="mt-1 text-sm opacity-90">
+                  {updateState.status === "installed"
+                    ? "Feche e reabra o app agora para liberar o sistema."
+                    : updateState.status === "error"
+                      ? "O sistema segue bloqueado até a instalação obrigatória ser concluída."
+                      : "O sistema foi bloqueado e precisa concluir a atualização antes de continuar."}
+                </p>
+              </div>
+              <div className="flex items-center gap-2">
+                {updateState.status === "installed" ? (
+                  <Button onClick={() => void finalizeInstalledUpdate()} size="sm">
+                    Fechar para concluir
+                  </Button>
+                ) : (
+                  <Button disabled={installBusy || updateState.status === "installing"} onClick={() => void installUpdateNow()} size="sm">
+                    {installBusy || updateState.status === "installing" ? "Instalando..." : updateState.status === "error" ? "Tentar novamente" : "Instalar agora"}
+                  </Button>
+                )}
+                <Link className={buttonVariants({ size: "sm", variant: "outline" })} to="/atualizacoes">
+                  Ver detalhes
+                </Link>
+              </div>
+            </div>
+          </div>
+          <div className="fixed inset-0 z-[140] flex items-center justify-center bg-[rgba(6,8,12,0.72)] p-4 pt-28 backdrop-blur-md">
+          <div className="w-full max-w-[640px] rounded-[28px] border border-[rgba(201,168,111,0.2)] bg-[linear-gradient(180deg,rgba(28,32,40,0.98),rgba(17,20,27,0.98))] p-6 shadow-[0_40px_90px_-40px_rgba(0,0,0,0.8)]">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <Badge variant="warning">Atualização obrigatória</Badge>
+                <h2 className="mt-3 text-2xl font-semibold text-slate-50">
+                  {updateState.status === "installed"
+                    ? "Reinicie para concluir a atualização obrigatória"
+                    : updateState.status === "installing"
+                      ? "Instalando atualização obrigatória"
+                      : updateState.status === "error"
+                        ? "Falha ao instalar a atualização obrigatória"
+                        : "Uma nova versão precisa ser instalada agora"}
+                </h2>
+                <p className="mt-3 text-sm leading-6 text-slate-300">
+                  {updateState.details ??
+                    "Por regra de operação, esta instalação fica bloqueada até concluir a atualização. Isso evita que o usuário continue trabalhando em uma versão desatualizada."}
+                </p>
+              </div>
+              {forcedUpdateVersion ? <Badge variant="outline">v{forcedUpdateVersion}</Badge> : null}
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-3">
+              <div className="premium-tile rounded-[20px] p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Status</p>
+                <p className="mt-2 text-lg font-semibold text-slate-50">
+                  {updateState.status === "available"
+                    ? "Preparando instalação"
+                    : updateState.status === "installing"
+                      ? "Baixando pacote"
+                      : updateState.status === "installed"
+                        ? "Pronto para reiniciar"
+                        : "Tentativa necessária"}
+                </p>
+              </div>
+              <div className="premium-tile rounded-[20px] p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Uso do sistema</p>
+                <p className="mt-2 text-lg font-semibold text-slate-50">Bloqueado</p>
+              </div>
+              <div className="premium-tile rounded-[20px] p-4">
+                <p className="text-[11px] uppercase tracking-[0.18em] text-slate-400">Ação obrigatória</p>
+                <p className="mt-2 text-lg font-semibold text-slate-50">
+                  {updateState.status === "installed" ? "Fechar e reabrir" : "Instalar agora"}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex flex-wrap items-center gap-3">
+              {updateState.status === "installed" ? (
+                <Button onClick={() => void finalizeInstalledUpdate()} size="lg">
+                  Fechar para concluir
+                </Button>
+              ) : (
+                <Button disabled={installBusy || updateState.status === "installing"} onClick={() => void installUpdateNow()} size="lg">
+                  {installBusy || updateState.status === "installing" ? "Instalando..." : updateState.status === "error" ? "Tentar instalar novamente" : "Instalar atualização obrigatória"}
+                </Button>
+              )}
+              <Link className={buttonVariants({ size: "lg", variant: "outline" })} to="/atualizacoes">
+                Abrir painel de atualização
+              </Link>
+            </div>
+
+            <p className="mt-4 text-xs leading-5 text-slate-400">
+              O sistema não libera navegação, vendas ou cadastros enquanto a atualização obrigatória não for instalada e concluída.
+            </p>
+          </div>
+          </div>
+        </>
+      ) : null}
     </div>
   );
 }

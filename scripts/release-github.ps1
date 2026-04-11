@@ -19,7 +19,11 @@ if (-not $SkipEnvLoad) {
 }
 
 Write-Host "`n[1/2] Validando pipeline automatico..." -ForegroundColor Cyan
-& node .\scripts\check-release-readiness.mjs
+$readinessArgs = @(".\scripts\check-release-readiness.mjs")
+if ($Version) {
+  $readinessArgs += "--target-version=$Version"
+}
+& node @readinessArgs
 if ($LASTEXITCODE -ne 0) {
   throw "O pipeline automatico ainda tem pendencias estruturais."
 }
